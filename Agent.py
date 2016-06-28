@@ -118,16 +118,16 @@ class Agent:
         sortedObj, sortedObj_s = self.dict2SortedList(problem.figures[nums[num]].objects)
         attr_map.append(sortedObj_s)
         choices.append(sortedObj)
-     print("choices and sht")
-     print(choices)
-     print(attr_map)
+     #print("choices and sht")
+     #print(choices)
+     #print(attr_map)
 
 
      A_BComp = self.objectComp(obj[0], obj_s[0])
-     print("ABComp")
-     print(obj[0])
-     print(obj_s[0])
-     print(A_BComp)
+     #print("ABComp")
+     #print(obj[0])
+     #print(obj_s[0])
+     #print(A_BComp)
 
      choiceNum = 0
      for i in range(0,len(choices)):
@@ -146,9 +146,9 @@ class Agent:
                  break
              counter = counter + 1
          if counter == len(C_d):
-             print("Found it")
+             #print("Found it")
              out = choiceNum
-             print(C_d)
+             #print(C_d)
              break
      print(out)
      return out
@@ -163,7 +163,7 @@ class Agent:
              temp.append(Image.open(obj.visualFilename).convert(mode='L'))
          objs.append(temp)
 
-     nums = ['1', '2', '3', '4', '5', '6']
+     nums = ['1','2','3', '4', '5', '6','7','8']
      choices = {}
      for num in nums:
          temp = problem.figures[num]
@@ -176,36 +176,72 @@ class Agent:
      '''
 
 
-
+     '''
      # Try no manipulation
      testSame = ImageOperations.noOp(objs)
      same = True
      for i in range(0,(len(objs)-1)):
-         if testSame.isRowSame(objs[i]) == False:
+         if testSame.isRowValid(objs[i]) == False:
             same = False
             break
      if same == True:
          for choice in choices:
-                 print("objss")
                  if testSame.compCandidate(objs[len(objs)-1], choices[choice]) == True:
                      out = int(choice)
-     print(out)
 
 
      # Try fills
      if out < 0:
+       fillsFlag = True
        fillObj = ImageOperations.fillOp(objs)
+       for i in range(0,len(objs)-1):
+           temp  = fillObj.getFillFactorRow(objs[i])
+           fillsFlag = fillObj.isValid(temp)
+
+
+       if fillsFlag == True:
+          for choice in choices:
+              print(choice)
+              print(objs[len(objs)-1])
+              if fillObj.compCandidate(objs[len(objs)-1], choices[choice]) == True:
+                  print(choice,"is right")
+                  out = int(choice)
+     '''
+
+     # Try transform
+     if out < 0:
+       transFlag = True
+       transObj = ImageOperations.transformOp(objs)
+       for i in range(0,len(objs)-1):
+           print("baselines")
+           objs[i]=transObj.getEdgeOnlyRow(objs[i])
+           temp  = transObj.getPixelDiffRow(objs[i])
+           print(temp)
+           transFlag = transObj.isValid(temp,thresh=10)
+
+
+       if transFlag == True:
+          for choice in choices:
+              print(choice)
+              if transObj.compCandidate(objs[len(objs)-1], choices[choice]) == True:
+                  print(choice,"is right")
+                  out = int(choice)
+
+
+     '''
        factor =  fillObj.getFillFactorRow(fillObj.getEdgeOnlyRow(objs[0]))
        factor1 =  fillObj.getFillFactorRow(fillObj.getEdgeOnlyRow(objs[1]))
-       #print(factor)
-       #print(factor1)
-       '''
+       print(factor)
+       print(factor1)
+     '''
+
+     '''
        fillObj.storeFillFactor(factor)
        for choice in choices:
            if fillObj.compCandidate(objs[1][0], choices[choice]) == True:
                out = int(choice)
-       '''
-
+     '''
+     '''
      # Try transforms
      if out < 0:
            transObj = ImageOperations.transformOp(objs)
@@ -220,7 +256,7 @@ class Agent:
                print(choice)
                if transObj.compCandidate(obj3, choices[choice]) == True:
                    out = int(choice)
-
+     '''
 
      '''
      diff = ImageChops.difference(A, B)
@@ -252,7 +288,7 @@ class Agent:
         m3 = [problem.figures['G'],problem.figures['H']]
         prob_mat.append(m3)
 
-    '''
+
     if problem.hasVisual == True:
         try:
             out = self.solveVerbal(problem,prob_mat)
@@ -262,10 +298,12 @@ class Agent:
 
     if out < 0:
         out = self.solveVisual(problem, prob_mat)
-    '''
+
 
     #out = self.solveVerbal(problem, prob_mat)
-    out = self.solveVisual(problem,prob_mat)
+    #out = self.solveVisual(problem,prob_mat)
+
+
 
     print(out)
     return out
