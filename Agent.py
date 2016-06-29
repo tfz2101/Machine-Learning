@@ -208,6 +208,7 @@ class Agent:
                   out = int(choice)
      '''
 
+     '''
      # Try transform
      if out < 0:
        transFlag = True
@@ -226,7 +227,10 @@ class Agent:
               if transObj.compCandidate(objs[len(objs)-1], choices[choice]) == True:
                   print(choice,"is right")
                   out = int(choice)
+     '''
 
+     fourOp = ImageOperations.divideImage(objs)
+     temp = fourOp.getSegments(objs[0][0],1,2)
 
      '''
        factor =  fillObj.getFillFactorRow(fillObj.getEdgeOnlyRow(objs[0]))
