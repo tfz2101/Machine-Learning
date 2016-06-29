@@ -37,8 +37,6 @@ class ImageOperations:
  def getArr(self, img):
      (width, height) = img.size
      o1_arr = np.array(list(img.getdata())).reshape((height, width))
-
-
      return o1_arr
 
  def getEdgeOnlyRow(self, imgs):
@@ -176,6 +174,26 @@ class transformOp(fillOp):
           if self.isValid(pixelFactor) == True:
               out = True
           return out
+
+
+class divideImage(ImageOperations):
+
+    def getSegments(self,img, rows, cols):
+        (width, height) = img.size
+        num = rows * cols
+        rowInc = float(width/rows)
+        colInc = float(height/cols)
+        out = []
+        for i in range(0,rows):
+            for j in range(0,cols):
+                left = int(rowInc*i)
+                top = int(colInc*j)
+                right = int(rowInc*(i+1))
+                bottom = int(colInc*(j+1))
+                temp = img.crop(box=(left,top, right, bottom))
+                out.append(temp)
+        return out
+
 
 
 
