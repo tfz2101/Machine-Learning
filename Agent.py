@@ -170,104 +170,301 @@ class Agent:
          obj = Image.open(temp.visualFilename).convert(mode='L')
          choices[num]=obj
 
-     '''
-     im1 = objs[0][0].filter(ImageFilter.FIND_EDGES)
-     im2 = objs[0][1].filter(ImageFilter.FIND_EDGES)
-     '''
+     control = ImageOperations.framesControl()
+     ansOp = ImageOperations.answerOp(objs)
+     answers = choices.copy()
+
+     #Build the operation frames depository
+     fillObj = ImageOperations.fillOp(objs)
+     sameObj = ImageOperations.noOp(objs)
+     transObj = ImageOperations.transformOp(objs)
+     objsE = transObj.getEdgeOnlyBlock(objs)
+     choicesE = transObj.getEdgeOnlyChoices(choices)
+
+     #Constants/Helper Values
+     checkFactor = np.average(fillObj.getFillFactorRow(objs[0]))
+
+     args = [(objsE,transObj,choicesE,transObj.getFillFactorRow,transObj.isValid,10),
+             (objs,sameObj,choices,sameObj.getFillFactorRow,sameObj.isValid,0.99),
 
 
-     '''
-     # Try no manipulation
-     testSame = ImageOperations.noOp(objs)
-     same = True
-     for i in range(0,(len(objs)-1)):
-         if testSame.isRowValid(objs[i]) == False:
-            same = False
-            break
-     if same == True:
-         for choice in choices:
-                 if testSame.compCandidate(objs[len(objs)-1], choices[choice]) == True:
-                     out = int(choice)
+
+             (objs,fillObj,choices,fillObj.getFillFactorRow,fillObj.isValid,10000)
+             ]
+
+     tstArgs = [{'fcn':ansOp.elimByPixels},
+                {'fcn':ansOp.elimBySimilarity,'thresh':.05},
+                {'fcn':ansOp.elimByFactor,'factor': checkFactor,'thresh':.02 },
+                {'fcn':ansOp.elimByFirstColumn,'factor': checkFactor,'thresh':3, 'compIdx':0 }
+
+               ]
 
 
-     # Try fills
+
+     # Try transform on Edge of figures, solve 1,2,4,5,6,
      if out < 0:
-       fillsFlag = True
-       fillObj = ImageOperations.fillOp(objs)
-       for i in range(0,len(objs)-1):
-           temp  = fillObj.getFillFactorRow(objs[i])
-           fillsFlag = fillObj.isValid(temp)
+       argsIdx = 0
+       while ansOp.isValid(answers) == False and argsIdx < len(args):
+           answers = args[argsIdx][2].copy()
+           transFlag = control.getProbRelation(*args[argsIdx])
+           if transFlag == True:
+              answers = control.testChoices(args[argsIdx][0],answers, args[argsIdx][1].compCandidate)
+              elimIdx = 0
+              while ansOp.isValid(answers) == False and elimIdx < len(tstArgs):
+                answers = control.elimByFcn(answers, **tstArgs[elimIdx])
+                if ansOp.isValid(answers):
+                    out,value = answers.items()[0]
+                    print(out)
+                elimIdx =  elimIdx +1
+           argsIdx = argsIdx + 1
 
 
-       if fillsFlag == True:
-          for choice in choices:
-              print(choice)
-              print(objs[len(objs)-1])
-              if fillObj.compCandidate(objs[len(objs)-1], choices[choice]) == True:
-                  print(choice,"is right")
-                  out = int(choice)
-     '''
 
-     '''
-     # Try transform
+
+
+     # Try transform top half and bottom half, solve 8,10,3
      if out < 0:
+       fillOp = ImageOperations.fillOp(objs)
+       checkFactor = fillOp.getFillFactorRow(objs[0])
+       checkFactor=np.average(checkFactor)
+       answers = {}
        transFlag = True
        transObj = ImageOperations.transformOp(objs)
+       fourOp = ImageOperations.divideImage(objs)
        for i in range(0,len(objs)-1):
            print("baselines")
-           objs[i]=transObj.getEdgeOnlyRow(objs[i])
-           temp  = transObj.getPixelDiffRow(objs[i])
-           print(temp)
-           transFlag = transObj.isValid(temp,thresh=10)
+           objsE = objs[i]
+           groupedSegments = fourOp.groupSegments(objsE,2,1)
+           print("this is ",i)
+           for h in range(0,len(groupedSegments)):
+             temp  = transObj.getFillFactorRow(groupedSegments[h])
+             print(temp)
+             flag = transObj.isOneDirection(temp)
+             if flag == False:
+                 transFlag = False
+                 break
+
 
 
        if transFlag == True:
           for choice in choices:
               print(choice)
-              if transObj.compCandidate(objs[len(objs)-1], choices[choice]) == True:
-                  print(choice,"is right")
-                  out = int(choice)
-     '''
+              candidate = objs[len(objs)-1][:]
+              candidate.append(choices[choice])
+              choiceSegments = fourOp.groupSegments(candidate,2,1)
+              for h in range(0,len(choiceSegments)):
+                 temp  = transObj.getFillFactorRow(choiceSegments[h])
+                 print(temp)
+                 flag = transObj.isOneDirection(temp)
+                 if flag == False:
+                    break
+              if flag:
+                 print(choice,"is right")
+                 ans = int(choice)
+                 answers[ans]=candidate
 
-     fourOp = ImageOperations.divideImage(objs)
-     temp = fourOp.getSegments(objs[0][0],1,2)
+       ansOp = ImageOperations.answerOp(objs)
+
+       if ansOp.isValid(answers):
+           out = ans
+       else:
+           filterAns = ansOp.elimByFirstColumn(answers,0,3)#ansOp.elimBySimilarity(answers)
+           print('final answer')
+           print(answers)
+           if ansOp.isValid(filterAns):
+               out,value = filterAns.items()[0]
+               print(out)
+           else:
+               filterAns = ansOp.elimBySimilarity(answers)
+               print('final answer')
+               print(answers)
+               if ansOp.isValid(filterAns):
+                out,value = filterAns.items()[0]
+                print(out)
+               else:
+                   filterAns = ansOp.elimByFactor(answers,checkFactor)
+                   print('final answer')
+                   print(answers)
+                   if ansOp.isValid(filterAns):
+                    out,value = filterAns.items()[0]
+                    print(out)
+
+
 
      '''
-       factor =  fillObj.getFillFactorRow(fillObj.getEdgeOnlyRow(objs[0]))
-       factor1 =  fillObj.getFillFactorRow(fillObj.getEdgeOnlyRow(objs[1]))
-       print(factor)
-       print(factor1)
-     '''
-
-     '''
-       fillObj.storeFillFactor(factor)
-       for choice in choices:
-           if fillObj.compCandidate(objs[1][0], choices[choice]) == True:
-               out = int(choice)
-     '''
-     '''
-     # Try transforms
+     #Same Top half, P#11
      if out < 0:
-           transObj = ImageOperations.transformOp(objs)
-           pixDiff =  transObj.getPixelDiffRow(transObj.getEdgeOnlyRow(objs[0]))
-           pixDiff1 =  transObj.getPixelDiffRow(transObj.getEdgeOnlyRow(objs[1]))
-           print(pixDiff)
-           print(pixDiff1)
-           transObj.storePixelDiff(pixDiff)
-           print("A and B pix diff")
-           print(pixDiff)
-           for choice in choices:
-               print(choice)
-               if transObj.compCandidate(obj3, choices[choice]) == True:
-                   out = int(choice)
-     '''
+         fourOp = ImageOperations.divideImage(objs)
+         segmentInd = [0,0]
+         frameInd = [1,2]
+         moveFlag = True
+         thresh = .015
+         answers = {}
+         for i in range(0,2):
+             groupedSegments = fourOp.groupSegments(objs[i],2,1)
+             print("this is ",i)
+             moveObj = ImageOperations.moveOp(objs)
+             factorRow = moveObj.getFillFactorBlock(groupedSegments)
+             print(factorRow)
+             flag = moveObj.isSegmentSame(factorRow,segmentInd,frameInd, thresh)
 
-     '''
-     diff = ImageChops.difference(A, B)
+             print(flag)
+             if flag == False:
+                 moveFlag = False
+                 break
 
-     a_s = A.split()
-     # print(a_s[0].getpixel((0,0)))
-     # print(self.similarity(A,B))
+         if moveFlag == True:
+             for choice in choices:
+                print(choice)
+                candidate = objs[len(objs)-1][:]
+                candidate.append(choices[choice])
+                groupedSegments = fourOp.groupSegments(candidate,2,1)
+                groupedBlock = moveObj.getFillFactorBlock(groupedSegments)
+                print(groupedBlock)
+                flag = moveObj.isSegmentSame(groupedBlock,segmentInd,frameInd,thresh)
+                if flag == True:
+                  print(choice,"is right")
+                  ans = int(choice)
+                  answers[ans]=candidate
+
+         ansOp = ImageOperations.answerOp(objs)
+         filterAns = ansOp.elimByPixels(answers)
+         print('final answer')
+         print(answers)
+         print(filterAns)
+         if ansOp.isValid(filterAns):
+            out,value = filterAns.items()[0]
+            print(out)
+
+
+
+
+
+
+     #1st and last same pixels, mirror effect, P#7
+     if out < 0:
+         fourOp = ImageOperations.divideImage(objs)
+         segmentInd = [0,1]
+         frameInd = [0,2]
+         moveFlag = True
+         thresh = .015
+         noOp = ImageOperations.noOp(objs)
+         answers ={}
+         for i in range(0,2):
+             groupedSegments = fourOp.groupSegments(objs[i],1,2)
+             #groupedSegments = fourOp.getEdgeOnlyBlock(groupedSegments)
+             print("this is ",i)
+             moveObj = ImageOperations.moveOp(objs)
+             factorRow = moveObj.getFillFactorBlock(groupedSegments)
+             print(factorRow)
+             flag = moveObj.isSegmentSame(factorRow,segmentInd,frameInd, thresh) and noOp.isValid([objs[i][0],objs[i][len(objs[i])-1]])
+
+             print(flag)
+             if flag == False:
+                 moveFlag = False
+                 break
+
+         if moveFlag == True:
+             for choice in choices:
+                print(choice)
+                candidate = objs[len(objs)-1][:]
+                candidate.append(choices[choice])
+                #candidate = fourOp.getEdgeOnlyRow(candidate)
+                groupedSegments = fourOp.groupSegments(candidate,1,2)
+                #groupedSegments = fourOp.getEdgeOnlyBlock(groupedSegments)
+                groupedBlock = moveObj.getFillFactorBlock(groupedSegments)
+                print(groupedBlock)
+                flag = moveObj.isSegmentSame(groupedBlock,segmentInd,frameInd,thresh) and noOp.isValid([candidate[0],candidate[len(candidate)-1]])
+                if flag == True:
+                  print(choice,"is right")
+                  ans = int(choice)
+                  answers[ans]=candidate
+
+         ansOp = ImageOperations.answerOp(objs)
+         if ansOp.isValid(answers):
+               out = ans
+         else:
+               filterAns = ansOp.elimBySimilarity(answers)
+               print('final answer')
+               print(answers)
+               if ansOp.isValid(filterAns):
+                   out,value = filterAns.items()[0]
+                   print(out)
+               else:
+                   filterAns = ansOp.elimByFactor(answers,checkFactor)
+                   print('final answer')
+                   print(answers)
+                   if ansOp.isValid(filterAns):
+                    out,value = filterAns.items()[0]
+                    print(out)
+                   else:
+                    filterAns = ansOp.elimByVerticalReflection(answers, 0, 0.9)
+                    print('final answer')
+                    print(answers)
+                    if ansOp.isValid(filterAns):
+                        out,value = filterAns.items()[0]
+                        print(out)
+
+
+     #1st and last same pixels, mirror effect, P#12
+     if out < 0:
+         answers = {}
+         fourOp = ImageOperations.divideImage(objs)
+         segmentInd = [1,1]
+         frameInd = [1,2]
+         moveFlag = True
+         thresh = .015
+         transOp = ImageOperations.transformOp(objs)
+         for i in range(0,2):
+             groupedSegments = fourOp.groupSegments(objs[i],2,1)
+             #groupedSegments = fourOp.getEdgeOnlyBlock(groupedSegments)
+             print("this is ",i)
+             moveObj = ImageOperations.moveOp(objs)
+             groupedBlock = moveObj.getFillFactorBlock(groupedSegments)
+             factorRow =  transOp.getFillFactorRow(groupedSegments[1])
+             thresh = 200
+             print('thresh')
+             print(thresh)
+             print(groupedBlock)
+             print(factorRow)
+             flag =  transOp.isValid(factorRow,thresh) #moveObj.isSegmentSame(groupedBlock,segmentInd,frameInd, thresh)
+
+             print(flag)
+             if flag == False:
+                 moveFlag = False
+                 break
+
+
+         if moveFlag == True:
+             for choice in choices:
+                print(choice)
+                candidate = objs[len(objs)-1][:]
+                candidate.append(choices[choice])
+                #candidate = fourOp.getEdgeOnlyRow(candidate)
+                groupedSegments = fourOp.groupSegments(candidate,2,1)
+                #groupedSegments = fourOp.getEdgeOnlyBlock(groupedSegments)
+                groupedBlock = moveObj.getFillFactorBlock(groupedSegments)
+                print(groupedBlock)
+                factorRow =  transOp.getFillFactorRow(groupedSegments[1])
+                print(factorRow)
+                thresh = 200
+                print('thresh')
+                print(thresh)
+                flag =  transOp.isValid(factorRow,thresh) #moveObj.isSegmentSame(groupedBlock,segmentInd,frameInd,thresh)
+
+                if flag == True:
+                    print(choice,"is right")
+                    ans = int(choice)
+                    answers[ans]=candidate
+
+         ansOp = ImageOperations.answerOp(objs)
+         filterAns = ansOp.elimByPixels(answers)
+         print('final answer')
+         print(answers)
+         print(filterAns)
+         if ansOp.isValid(filterAns):
+             out,value = filterAns.items()[0]
+             print(out)
      '''
 
      return out
@@ -292,7 +489,7 @@ class Agent:
         m3 = [problem.figures['G'],problem.figures['H']]
         prob_mat.append(m3)
 
-
+    '''
     if problem.hasVisual == True:
         try:
             out = self.solveVerbal(problem,prob_mat)
@@ -301,11 +498,16 @@ class Agent:
 
 
     if out < 0:
-        out = self.solveVisual(problem, prob_mat)
+        try:
+            out = self.solveVisual(problem, prob_mat)
+        except:
+            out = -1
+    '''
 
 
-    #out = self.solveVerbal(problem, prob_mat)
-    #out = self.solveVisual(problem,prob_mat)
+
+
+    out = self.solveVisual(problem,prob_mat)
 
 
 
