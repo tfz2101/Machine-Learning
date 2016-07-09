@@ -34,6 +34,14 @@ class ImageOperations:
      err = abs(float(sum(ab) / 255)/len(ab))
      return 1 - err
 
+ def getImgVal(self, imgs):
+      vals = []
+      for i in range(0,len(imgs)):
+          img1 = self.getArr(imgs[i])
+          vals.append(np.sum(img1)/255)
+      return vals
+
+
  def getArr(self, img):
      (width, height) = img.size
      o1_arr = np.array(list(img.getdata())).reshape((height, width))
@@ -68,7 +76,7 @@ class noOp(ImageOperations):
           out= True
       return out
 
-  def isValid(self, imgRow, thresh=100):
+  def isValid(self, imgRow, thresh=0.99):
       out = True
       for i in range(0,len(imgRow)-1):
           img1 = imgRow[i]
@@ -88,6 +96,34 @@ class noOp(ImageOperations):
       if self.isValid(newRow):
           out = True
       return out
+
+
+class sameSetOp(noOp):
+    def getFillFactorRow(self, imgs,setImgs):
+        rowValsSet = self.getImgVal(setImgs)
+        rowSet = sorted(rowValsSet)
+        rowVals = self.getImgVal(imgs)
+        row1 = sorted(rowVals)
+        return [rowSet,row1]
+
+    def isValid(self, rows, thresh=0.99):
+        out = True
+        for i in range(0, len(rows[0])):
+            val = 1-abs(rows[0][i]-rows[1][i])/max(rows[0][i],rows[1][i])
+            if val==False:
+                out = False
+                break
+        return out
+
+    def compCandidate(self, imgs, choice, setImgs):
+          out = False
+          newRow = imgs[:]
+          newRow.append(choice)
+          rows = self.getFillFactorRow(setImgs,newRow)
+          if self.isValid(rows):
+              out = True
+          return out
+
 
 class moveOp(noOp):
 
@@ -244,12 +280,7 @@ class transformOp(fillOp):
               out = True
           return out
 
-      def getImgVal(self, imgs):
-          vals = []
-          for i in range(0,len(imgs)):
-              img1 = self.getArr(imgs[i])
-              vals.append(np.sum(img1)/255)
-          return vals
+
 
 
 class divideImage(ImageOperations):
@@ -475,11 +506,11 @@ class framesControl():
             flag = opValid(temp,thresh)
         return flag
 
-    def testChoices(self,objs,choices,compFcn,*obArg):
+    def testChoices(self,objs,choices,compFcn,**obArg):
         answers = {}
         for choice in choices:
               print(choice)
-              if compFcn(objs[len(objs)-1], choices[choice]) == True:
+              if compFcn(objs[len(objs)-1], choices[choice],**obArg) == True:
                   ans = int(choice)
                   candidate = objs[len(objs)-1][:]
                   candidate.append(choices[choice])
