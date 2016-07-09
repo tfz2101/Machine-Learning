@@ -175,6 +175,7 @@ class Agent:
      answers = choices.copy()
 
      #Build the operation frames depository
+     sameSetObj = ImageOperations.sameSetOp(objs)
      fillObj = ImageOperations.fillOp(objs)
      sameObj = ImageOperations.noOp(objs)
      transObj = ImageOperations.transformOp(objs)
@@ -184,7 +185,8 @@ class Agent:
      #Constants/Helper Values
      checkFactor = np.average(fillObj.getFillFactorRow(objs[0]))
 
-     args = [(objsE,transObj,choicesE,transObj.getFillFactorRow,transObj.isValid,10),
+     args = [(objs,sameSetObj,choices,sameSetObj.getFillFactorRow,sameSetObj.isValid,0.99,objs[0]),
+             (objsE,transObj,choicesE,transObj.getFillFactorRow,transObj.isValid,10),
              (objs,sameObj,choices,sameObj.getFillFactorRow,sameObj.isValid,0.99),
 
 
@@ -192,10 +194,16 @@ class Agent:
              (objs,fillObj,choices,fillObj.getFillFactorRow,fillObj.isValid,10000)
              ]
 
-     tstArgs = [{'fcn':ansOp.elimByPixels},
-                {'fcn':ansOp.elimBySimilarity,'thresh':.05},
-                {'fcn':ansOp.elimByFactor,'factor': checkFactor,'thresh':.02 },
-                {'fcn':ansOp.elimByFirstColumn,'factor': checkFactor,'thresh':3, 'compIdx':0 }
+     choiceArgs = [{'setImgs':objs[0]},
+                   {},
+                   {},
+
+                   {}
+                  ]
+     tstArgs = [{'fcn':ansOp.elimByPixels}#,
+                #{'fcn':ansOp.elimBySimilarity,'thresh':.05},
+                #{'fcn':ansOp.elimByFactor,'factor': checkFactor,'thresh':.02 },
+                #{'fcn':ansOp.elimByFirstColumn,'factor': checkFactor,'thresh':3, 'compIdx':0 }
 
                ]
 
@@ -208,7 +216,7 @@ class Agent:
            answers = args[argsIdx][2].copy()
            transFlag = control.getProbRelation(*args[argsIdx])
            if transFlag == True:
-              answers = control.testChoices(args[argsIdx][0],answers, args[argsIdx][1].compCandidate)
+              answers = control.testChoices(args[argsIdx][0],answers, args[argsIdx][1].compCandidate,**choiceArgs[argsIdx])
               elimIdx = 0
               while ansOp.isValid(answers) == False and elimIdx < len(tstArgs):
                 answers = control.elimByFcn(answers, **tstArgs[elimIdx])
