@@ -185,13 +185,13 @@ class Agent:
      #Constants/Helper Values
      checkFactor = np.average(fillObj.getFillFactorRow(objs[0]))
 
-     args = [(objs,sameSetObj,choices,sameSetObj.getFillFactorRow,sameSetObj.isValid,0.99,objs[0]),
-             (objsE,transObj,choicesE,transObj.getFillFactorRow,transObj.isValid,10),
-             (objs,sameObj,choices,sameObj.getFillFactorRow,sameObj.isValid,0.99),
+     args = [(objs,sameSetObj,choices,sameSetObj.getFillFactorRow,sameSetObj.isValid,0.99,objs[0])#,
+             #(objsE,transObj,choicesE,transObj.getFillFactorRow,transObj.isValid,10),
+             #(objs,sameObj,choices,sameObj.getFillFactorRow,sameObj.isValid,0.99),
 
 
 
-             (objs,fillObj,choices,fillObj.getFillFactorRow,fillObj.isValid,10000)
+             #(objs,fillObj,choices,fillObj.getFillFactorRow,fillObj.isValid,10000)
              ]
 
      choiceArgs = [{'setImgs':objs[0]},
@@ -229,7 +229,7 @@ class Agent:
 
 
 
-
+     '''
      # Try transform top half and bottom half, solve 8,10,3
      if out < 0:
        fillOp = ImageOperations.fillOp(objs)
@@ -297,7 +297,7 @@ class Agent:
                     out,value = filterAns.items()[0]
                     print(out)
 
-
+     '''
 
      '''
      #Same Top half, P#11
