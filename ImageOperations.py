@@ -108,9 +108,11 @@ class sameSetOp(noOp):
 
     def isValid(self, rows, thresh=0.99):
         out = True
+        out = True
         for i in range(0, len(rows[0])):
-            val = 1-abs(rows[0][i]-rows[1][i])/max(rows[0][i],rows[1][i])
-            if val==False:
+            val = 1-float(abs(rows[0][i]-rows[1][i]))/min(rows[0][i],rows[1][i])
+
+            if val<=thresh:
                 out = False
                 break
         return out
@@ -119,7 +121,7 @@ class sameSetOp(noOp):
           out = False
           newRow = imgs[:]
           newRow.append(choice)
-          rows = self.getFillFactorRow(setImgs,newRow)
+          rows = self.getFillFactorRow(newRow,setImgs)
           if self.isValid(rows):
               out = True
           return out
@@ -229,8 +231,6 @@ class fillOp(ImageOperations):
 
 
 class transformOp(fillOp):
-
-
       def getFillFactor(self, im1, im2):
           p_a = self.getArr(im1)
           p_b = self.getArr(im2)
@@ -244,6 +244,8 @@ class transformOp(fillOp):
               img1 = imgs[i]
               img2 = imgs[i+1]
               diffs.append(self.getFillFactor(img1, img2))
+          print('diffs')
+          print(diffs)
           return diffs
 
       def isValid(self, factorRow,thresh=10):
@@ -252,6 +254,7 @@ class transformOp(fillOp):
             if abs(factorRow[i+1]-factorRow[i]) >= thresh:
                 out = False
                 break
+          print('isValid?')
           print(out)
           return out
 
@@ -267,7 +270,7 @@ class transformOp(fillOp):
           out = False
           row = imgs[:]
           row.append(choice)
-          row = self.getEdgeOnlyRow(row)
+          #row = self.getEdgeOnlyRow(row)
           '''
           for i in range(0, len(row)):
               row[i].save(str(i),'JPEG')
@@ -280,7 +283,39 @@ class transformOp(fillOp):
               out = True
           return out
 
+class transformOpBySet(transformOp):
+      def getFillFactorRow(self, imgs, setImgs):
+          diffs = transformOp.getFillFactorRow(self,imgs)
+          diffsSet = transformOp.getFillFactorRow(self,setImgs)
+          diffSq = np.array(diffs)-np.array(diffsSet)
+          diffSq = diffSq.tolist()
+          print('diffSq')
+          print(diffSq)
+          return diffSq
 
+      def isValid(self, diffsRow,thresh=10):
+          out = True
+          for i in range(0,len(diffsRow)):
+            print('difference')
+            print(abs(diffsRow[i]))
+            if abs(diffsRow[i]) > thresh:
+                out = False
+                break
+          print('isValid?')
+          print(out)
+          return out
+
+      def compCandidate(self, imgs, choice,setImgs):
+          out = False
+          row = imgs[:]
+          row.append(choice)
+          #row = self.getEdgeOnlyRow(row)
+          pixelFactor = self.getFillFactorRow(row, setImgs)
+          print("pixel factor")
+          print(pixelFactor)
+          if self.isValid(pixelFactor) == True:
+              out = True
+          return out
 
 
 class divideImage(ImageOperations):
@@ -504,13 +539,15 @@ class framesControl():
         for i in range(0,len(objs)-1):
             temp  = opFcn(objs[i],*obArg)
             flag = opValid(temp,thresh)
+            if flag ==False:
+                break
         return flag
 
-    def testChoices(self,objs,choices,compFcn,**obArg):
+    def testChoices(self,objs,choices,compFcn,**choiceArgs):
         answers = {}
         for choice in choices:
               print(choice)
-              if compFcn(objs[len(objs)-1], choices[choice],**obArg) == True:
+              if compFcn(objs[len(objs)-1], choices[choice],**choiceArgs) == True:
                   ans = int(choice)
                   candidate = objs[len(objs)-1][:]
                   candidate.append(choices[choice])
