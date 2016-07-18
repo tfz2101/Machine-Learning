@@ -65,6 +65,31 @@ class ImageOperations:
         out[key]=dictOfImgs[key].filter(ImageFilter.FIND_EDGES)
     return out
 
+ def getDiagonalMatrix(self,imgs, setImgs):
+    out = imgs[:]
+    rowSet = self.getImgVal(setImgs)
+    row = self.getImgVal(imgs)
+    if rowSet == row:
+        pass
+    else:
+        for i in range(0,len(imgs)):
+            out[i]=imgs[i-1]
+    return out
+
+ def getColImgs(self,objs,colIdx):
+    out = []
+    for i in range(0, len(objs)):
+        out.append(objs[i][colIdx])
+    return out
+ def getOrder(self,nums):
+        out = nums[:]
+        ordered = sorted(nums)
+        for i in range(0,len(nums)):
+            for j in range(0,len(ordered)):
+                if nums[i]==ordered[j]:
+                    out[i]=j
+        return out
+
 
 class noOp(ImageOperations):
 
@@ -107,7 +132,6 @@ class sameSetOp(noOp):
         return [rowSet,row1]
 
     def isValid(self, rows, thresh=0.99):
-        out = True
         out = True
         for i in range(0, len(rows[0])):
             val = 1-float(abs(rows[0][i]-rows[1][i]))/min(rows[0][i],rows[1][i])
@@ -317,6 +341,55 @@ class transformOpBySet(transformOp):
               out = True
           return out
 
+class transformOpBySetConstantDiff(transformOpBySet):
+      def getFillFactorRow(self, imgs, setImgs):
+          rowValsSet = self.getImgVal(setImgs)
+          rowSet = sorted(rowValsSet)
+          rowVals = self.getImgVal(imgs)
+          row1 = sorted(rowVals)
+          diffs = np.array(rowSet)-np.array(row1)
+          diffSq = diffs.tolist()
+          print('row of differences')
+          print(diffSq)
+          return diffSq
+
+      def isValid(self, diffsRow,thresh=20):
+          out = True
+          diffsRowNP = np.array(diffsRow)
+          if (diffsRowNP==0).all(axis=0):
+              pass
+          else:
+              factor = diffsRow[0]
+              for i in range(0,len(diffsRow)):
+                print('diff!!!!')
+                print(abs(diffsRow[i]-factor))
+                if abs(diffsRow[i]-factor) > thresh:
+                    out = False
+                    break
+          print('isValid?')
+          print(out)
+          return out
+
+class transformOpBySetDiag(transformOpBySetConstantDiff):
+    def subOrdered(self,refImgs):
+        refVal = self.getImgVal(refImgs)
+        order = self.getOrder(refVal)
+        return order
+    def getFillFactorRow(self, imgs, setImgs, refImgs):
+      out = True
+      order = self.getOrder(refImgs)
+      if imgs == setImgs:
+          pass
+      else:
+          pass
+
+      out = self.subOrdered(refImgs)
+      print('ordered index')
+      print(out)
+      return out
+
+    def isValid(self, diffsRow,thresh=20):
+        return True
 
 class divideImage(ImageOperations):
 
