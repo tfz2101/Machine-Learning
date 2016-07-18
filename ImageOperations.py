@@ -65,7 +65,7 @@ class ImageOperations:
         out[key]=dictOfImgs[key].filter(ImageFilter.FIND_EDGES)
     return out
 
- def getDiagonalMatrix(self,imgs, setImgs):
+ def getDiagonalMatrix(self,imgs, setImgs, modFactor=3):
     out = imgs[:]
     rowSet = self.getImgVal(setImgs)
     row = self.getImgVal(imgs)
@@ -79,8 +79,13 @@ class ImageOperations:
  def getColImgs(self,objs,colIdx):
     out = []
     for i in range(0, len(objs)):
-        out.append(objs[i][colIdx])
+       try:
+           out.append(objs[i][colIdx])
+       except:
+           break
+
     return out
+
  def getOrder(self,nums):
         out = nums[:]
         ordered = sorted(nums)
@@ -371,25 +376,36 @@ class transformOpBySetConstantDiff(transformOpBySet):
           return out
 
 class transformOpBySetDiag(transformOpBySetConstantDiff):
+
     def subOrdered(self,refImgs):
         refVal = self.getImgVal(refImgs)
         order = self.getOrder(refVal)
         return order
+
     def getFillFactorRow(self, imgs, setImgs, refImgs):
-      out = True
-      order = self.getOrder(refImgs)
+      '''
       if imgs == setImgs:
           pass
       else:
           pass
+      '''
 
-      out = self.subOrdered(refImgs)
-      print('ordered index')
+      dImgs = self.getDiagonalMatrix(imgs,setImgs,len(imgs))
+      subOrder = self.subOrdered(dImgs)
+      out = subOrder
+
+
+      print('diagonal row order')
       print(out)
+      print('ref row order')
+      print(self.subOrdered(refImgs))
       return out
 
     def isValid(self, diffsRow,thresh=20):
         return True
+
+    def compCandidate(self, imgs, choice,setImgs, refImgs):
+        pass
 
 class divideImage(ImageOperations):
 
