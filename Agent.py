@@ -186,24 +186,30 @@ class Agent:
      objsE = transObj.getEdgeOnlyBlock(objs)
      choicesE = transObj.getEdgeOnlyChoices(choices)
 
-     objsDiag = []
-     for i in range(0,len(objs)):
-         objsDiag.append(fillObj.getDiagonalMatrix(objs[i],objs[0]))
+     choiceCol = [objs[0][2],objs[1][2]]
+     objsInv = []
+     for i in range(0,(len(objs)-1)):
+         objsInv.append(fillObj.getColImgs(objs,i))
+     objsInv.append(choiceCol)
 
-     objsInv = objs[:][:]
-     for i in range(0,len(objs)):
-         for j in range(0,len(objs[0])):
-             objsInv[i][j]=objs[j][i]
 
 
 
      #Constants/Helper Values
      checkFactor = np.average(fillObj.getFillFactorRow(objs[0]))
-     colImgs = fillObj.getColImgs(objsDiag,0)
+     diagRefImgs = []
+     objsRef = []
+     for i in range(0,len(objsInv)):
+         objsRef.append(fillObj.getDiagonalMatrix(objsInv[i],objsInv[0]))
+     diagRefImgs = objsRef[1]
+
+     print('diag ref img')
+     print(fillObj.getImgVal(diagRefImgs))
+
 
 
      args = [#(objs,sameSetObj,choices,sameSetObj.getFillFactorRow,sameSetObj.isValid,0.99,objs[0]),
-             (objsDiag,transSetDiag,choices,transSetDiag.getFillFactorRow,transSetDiag.isValid,20,objs[0],colImgs)
+             (objsInv,transSetDiag,choices,transSetDiag.getFillFactorRow,transSetDiag.isValid,20,objsInv[0],diagRefImgs)
              #(objs,transSetConst,choices,transSetConst.getFillFactorRow,transSetConst.isValid,20,objs[0]) #Solves 6
              #(objs,transSetObj,choices,transSetObj.getFillFactorRow,transSetObj.isValid,10,objs[0])#Solves 4,5
              #(objsE,transObj,choicesE,transObj.getFillFactorRow,transObj.isValid,10),
@@ -216,7 +222,7 @@ class Agent:
              ]
 
      choiceArgs = [#{'setImgs':objs[0]},
-                   {'setImgs':objs[0]},
+                   {'setImgs':objs[0],'refImgs':objs[0]},
                    #{'setImgs':objs[0]},
                    #{'setImgs':objs[0]},
                    {},
