@@ -1,4 +1,4 @@
-# Your Agent for solving Raven's Progressive Matrices. You MUST modify this file.
+    # Your Agent for solving Raven's Progressive Matrices. You MUST modify this file.
 #
 # You may also create and submit new files in addition to modifying this file.
 #
@@ -170,6 +170,7 @@ class Agent:
          obj = Image.open(temp.visualFilename).convert(mode='L')
          choices[num]=obj
 
+
      control = ImageOperations.framesControl()
      ansOp = ImageOperations.answerOp(objs)
      answers = choices.copy()
@@ -180,14 +181,31 @@ class Agent:
      sameObj = ImageOperations.noOp(objs)
      transObj = ImageOperations.transformOp(objs)
      transSetObj = ImageOperations.transformOpBySet(objs)
+     transSetConst = ImageOperations.transformOpBySetConstantDiff(objs)
+     transSetDiag = ImageOperations.transformOpBySetDiag(objs)
      objsE = transObj.getEdgeOnlyBlock(objs)
      choicesE = transObj.getEdgeOnlyChoices(choices)
 
+     objsDiag = []
+     for i in range(0,len(objs)):
+         objsDiag.append(fillObj.getDiagonalMatrix(objs[i],objs[0]))
+
+     objsInv = objs[:][:]
+     for i in range(0,len(objs)):
+         for j in range(0,len(objs[0])):
+             objsInv[i][j]=objs[j][i]
+
+
+
      #Constants/Helper Values
      checkFactor = np.average(fillObj.getFillFactorRow(objs[0]))
+     colImgs = fillObj.getColImgs(objsDiag,0)
+
 
      args = [#(objs,sameSetObj,choices,sameSetObj.getFillFactorRow,sameSetObj.isValid,0.99,objs[0]),
-             (objs,transSetObj,choices,transSetObj.getFillFactorRow,transSetObj.isValid,10,objs[0])
+             (objsDiag,transSetDiag,choices,transSetDiag.getFillFactorRow,transSetDiag.isValid,20,objs[0],colImgs)
+             #(objs,transSetConst,choices,transSetConst.getFillFactorRow,transSetConst.isValid,20,objs[0]) #Solves 6
+             #(objs,transSetObj,choices,transSetObj.getFillFactorRow,transSetObj.isValid,10,objs[0])#Solves 4,5
              #(objsE,transObj,choicesE,transObj.getFillFactorRow,transObj.isValid,10),
              #(objs,transObj,choices,transObj.getFillFactorRow,transObj.isValid,20)
              #(objs,sameObj,choices,sameObj.getFillFactorRow,sameObj.isValid,0.99),
@@ -199,6 +217,8 @@ class Agent:
 
      choiceArgs = [#{'setImgs':objs[0]},
                    {'setImgs':objs[0]},
+                   #{'setImgs':objs[0]},
+                   #{'setImgs':objs[0]},
                    {},
                    {},
                    {},
