@@ -186,31 +186,25 @@ class Agent:
      objsE = transObj.getEdgeOnlyBlock(objs)
      choicesE = transObj.getEdgeOnlyChoices(choices)
 
-     choiceCol = [objs[0][2],objs[1][2]]
-     objsInv = []
-     for i in range(0,(len(objs)-1)):
-         objsInv.append(fillObj.getColImgs(objs,i))
-     objsInv.append(choiceCol)
+     objsDiagInv = [[objs[0][0],objs[1][2],objs[2][1]],[objs[0][2],objs[1][1],objs[2][0]],[objs[0][1],objs[1][0]]]
+
+
+
+
 
 
 
 
      #Constants/Helper Values
      checkFactor = np.average(fillObj.getFillFactorRow(objs[0]))
-     diagRefImgs = []
-     objsRef = []
-     for i in range(0,len(objsInv)):
-         objsRef.append(fillObj.getDiagonalMatrix(objsInv[i],objsInv[0]))
-     diagRefImgs = objsRef[1]
-
-     print('diag ref img')
-     print(fillObj.getImgVal(diagRefImgs))
+     diagRefImgs = [objs[0][0],objs[1][2],objs[2][1]]
 
 
 
-     args = [#(objs,sameSetObj,choices,sameSetObj.getFillFactorRow,sameSetObj.isValid,0.99,objs[0]),
-             (objsInv,transSetDiag,choices,transSetDiag.getFillFactorRow,transSetDiag.isValid,20,objsInv[0],diagRefImgs)
+     args = [#(objs,sameSetObj,choices,sameSetObj.getFillFactorRow,sameSetObj.isValid,0.99,objs[0]), #Solves 11,2,3
+             #(objsDiagInv,transSetDiag,choices,transSetDiag.getFillFactorRow,transSetDiag.isValid,20,objsDiagInv[0])
              #(objs,transSetConst,choices,transSetConst.getFillFactorRow,transSetConst.isValid,20,objs[0]) #Solves 6
+             (objsDiagInv,transSetConst,choices,transSetConst.getFillFactorRow,transSetConst.isValid,20,objsDiagInv[0]) #Solves 12
              #(objs,transSetObj,choices,transSetObj.getFillFactorRow,transSetObj.isValid,10,objs[0])#Solves 4,5
              #(objsE,transObj,choicesE,transObj.getFillFactorRow,transObj.isValid,10),
              #(objs,transObj,choices,transObj.getFillFactorRow,transObj.isValid,20)
@@ -222,7 +216,7 @@ class Agent:
              ]
 
      choiceArgs = [#{'setImgs':objs[0]},
-                   {'setImgs':objs[0],'refImgs':objs[0]},
+                   {'refImgs':objsDiagInv[0]},
                    #{'setImgs':objs[0]},
                    #{'setImgs':objs[0]},
                    {},
@@ -231,9 +225,9 @@ class Agent:
 
                    {}
                   ]
-     tstArgs = [#{'fcn':ansOp.elimByPixels}#,
+     tstArgs = [#{'fcn':ansOp.elimByPixels},
                 #{'fcn':ansOp.elimBySimilarity,'thresh':.05},
-                #{'fcn':ansOp.elimByFactor,'factor': checkFactor,'thresh':.02 },
+                #{'fcn':ansOp.elimByFactor,'factor': checkFactor,'thresh':.02 }#,
                 #{'fcn':ansOp.elimByFirstColumn,'factor': checkFactor,'thresh':3, 'compIdx':0 }
 
                ]
