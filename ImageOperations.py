@@ -382,31 +382,41 @@ class transformOpBySetDiag(transformOpBySetConstantDiff):
         order = self.getOrder(refVal)
         return order
 
-    def getFillFactorRow(self, imgs, setImgs, refImgs):
-      '''
-      if imgs == setImgs:
-          pass
-      else:
-          pass
-      '''
+    def checkSameOrder(self,order1,refOrder):
+        out =False
+        for i in range(0,len(order1)):
+            temp = order1[:]
+            for a in range(0,len(order1)):
+                temp[a] = order1[a-i]
+                #temp[a] = order1[divmod(a+i,len(order1))[1]]
+            if temp == refOrder:
+                out = True
+                break
+        return out
 
-      dImgs = self.getDiagonalMatrix(imgs,setImgs,len(imgs))
-      subOrder = self.subOrdered(dImgs)
-      out = subOrder
 
 
-      print('diagonal row order')
-      print(out)
-      print('ref row order')
-      print(self.subOrdered(refImgs))
-      return out
+    def getFillFactorRow(self, imgs, refImgs):
+      imgOrder = self.subOrdered(imgs)
+      refOrder = self.subOrdered(refImgs)
+      return [imgOrder,refOrder]
 
-    def isValid(self, diffsRow,thresh=20):
-        return True
+    def isValid(self, listOfOrders, thresh = 20):
+        orderCheck = self.checkSameOrder(listOfOrders[0],listOfOrders[1])
+        print('isTrue?')
+        print(orderCheck)
+        return orderCheck
 
-    def compCandidate(self, imgs, choice,setImgs, refImgs):
-        pass
-
+    def compCandidate(self, imgs, choice,refImgs):
+          out = False
+          row = imgs[:]
+          row.append(choice)
+          order = self.getFillFactorRow(row, refImgs)
+          print("choice order")
+          print(order)
+          if self.isValid(order) == True:
+              out = True
+          return out
 class divideImage(ImageOperations):
 
     def getSegments(self,img, rows, cols):
