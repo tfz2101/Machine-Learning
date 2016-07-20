@@ -183,8 +183,13 @@ class Agent:
      transSetObj = ImageOperations.transformOpBySet(objs)
      transSetConst = ImageOperations.transformOpBySetConstantDiff(objs)
      transSetDiag = ImageOperations.transformOpBySetDiag(objs)
+     blendImgObj = ImageOperations.blendImgOp(objs)
      objsE = transObj.getEdgeOnlyBlock(objs)
      choicesE = transObj.getEdgeOnlyChoices(choices)
+
+     objsInv = []
+     for i in range(0,len(objs)):
+         objsInv.append(fillObj.getColImgs(objs,i))
 
      objsDiagInv = [[objs[0][0],objs[1][2],objs[2][1]],[objs[0][2],objs[1][1],objs[2][0]],[objs[0][1],objs[1][0]]]
 
@@ -202,33 +207,48 @@ class Agent:
 
 
      args = [#(objs,sameSetObj,choices,sameSetObj.getFillFactorRow,sameSetObj.isValid,0.99,objs[0]), #Solves 11,2,3
-             #(objsDiagInv,transSetDiag,choices,transSetDiag.getFillFactorRow,transSetDiag.isValid,20,objsDiagInv[0])
+             #(objsDiagInv,transSetDiag,choices,transSetDiag.getFillFactorRow,transSetDiag.isValid,20,objsDiagInv[0]) #Solves 8, need help eliminating answers
              #(objs,transSetConst,choices,transSetConst.getFillFactorRow,transSetConst.isValid,20,objs[0]) #Solves 6
-             (objsDiagInv,transSetConst,choices,transSetConst.getFillFactorRow,transSetConst.isValid,20,objsDiagInv[0]) #Solves 12
+             #(objsDiagInv,transSetConst,choices,transSetConst.getFillFactorRow,transSetConst.isValid,20,objsDiagInv[0]) #Solves 12
              #(objs,transSetObj,choices,transSetObj.getFillFactorRow,transSetObj.isValid,10,objs[0])#Solves 4,5
              #(objsE,transObj,choicesE,transObj.getFillFactorRow,transObj.isValid,10),
              #(objs,transObj,choices,transObj.getFillFactorRow,transObj.isValid,20)
              #(objs,sameObj,choices,sameObj.getFillFactorRow,sameObj.isValid,0.99),
 
 
+             #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid,0.99,blendImgObj.blendImgbyBlack),  #Solves E1,E2,E3
+             #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid,0.01,blendImgObj.blendImgbyWhite),  #Solves E11
+             #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid_byNumBlack,0.01,blendImgObj.blendImgbyNumBlack)  #Solves E4 - Need a method to eliminate multiple correct answers
+             #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid,0.99,blendImgObj.blendImgbyOverlapBlack),  #Solves E5
+             (objsInv,blendImgObj,choices,blendImgObj.getFillFactorRowMiddleLast,blendImgObj.isValid,0.99,blendImgObj.blendImgbyBlack2),  #Solves E6
+
 
              #(objs,fillObj,choices,fillObj.getFillFactorRow,fillObj.isValid,10000)
              ]
 
      choiceArgs = [#{'setImgs':objs[0]},
-                   {'refImgs':objsDiagInv[0]},
+                   #{'refImgs':objsDiagInv[0]},
                    #{'setImgs':objs[0]},
                    #{'setImgs':objs[0]},
-                   {},
-                   {},
-                   {},
+                   #{},
+                   #{},
+                   #{},
+                   #{},
 
-                   {}
+
+                   #{'thresh':0.995,'blendFcn':blendImgObj.blendImgbyBlack,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRow},
+                   #{'thresh':0.995,'blendFcn':blendImgObj.blendImgbyWhite,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRow},
+                   #{'thresh':0.01,'blendFcn':blendImgObj.blendImgbyNumBlack,'validFcn':blendImgObj.isValid_byNumBlack,'fillRowFcn':blendImgObj.getFillFactorRow}
+                   #{'thresh':0.995,'blendFcn':blendImgObj.blendImgbyOverlapBlack,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRow},
+                   {'thresh':0.995,'blendFcn':blendImgObj.blendImgbyBlack2,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRowMiddleLast},
                   ]
      tstArgs = [#{'fcn':ansOp.elimByPixels},
                 #{'fcn':ansOp.elimBySimilarity,'thresh':.05},
-                #{'fcn':ansOp.elimByFactor,'factor': checkFactor,'thresh':.02 }#,
+                #{'fcn':ansOp.elimByFactor,'factor': checkFactor,'thresh':.02 },
                 #{'fcn':ansOp.elimByFirstColumn,'factor': checkFactor,'thresh':3, 'compIdx':0 }
+                #{'fcn':ansOp.elimByOneMinusTwo} # Solves E-4, doesn't work!!
+                {'fcn':ansOp.elimBySizeOrder,'refImgs':objsInv[0]} # Solves E-6
+
 
                ]
 
@@ -246,6 +266,8 @@ class Agent:
                   out,value = answers.items()[0]
                   break
               else:
+                  print('answers')
+                  print(answers)
                   elimIdx = 0
                   while ansOp.isValid(answers) == False and elimIdx < len(tstArgs):
                     answers = control.elimByFcn(answers, **tstArgs[elimIdx])
