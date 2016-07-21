@@ -217,11 +217,12 @@ class Agent:
 
 
              #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid,0.99,blendImgObj.blendImgbyBlack),  #Solves E1,E2,E3
-             #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid,0.01,blendImgObj.blendImgbyWhite),  #Solves E11
+             #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid,0.99,blendImgObj.blendImgbyWhite),  #Solves E11,10
              #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid_byNumBlack,0.01,blendImgObj.blendImgbyNumBlack)  #Solves E4 - Need a method to eliminate multiple correct answers
              #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid,0.99,blendImgObj.blendImgbyOverlapBlack),  #Solves E5
-             (objsInv,blendImgObj,choices,blendImgObj.getFillFactorRowMiddleLast,blendImgObj.isValid,0.99,blendImgObj.blendImgbyBlack2),  #Solves E6
-
+             #(objsInv,blendImgObj,choices,blendImgObj.getFillFactorRowMiddleLast,blendImgObj.isValid,0.99,blendImgObj.blendImgbyBlack2),  #Solves E6 - need a method to eliminate
+             #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid,0.90,blendImgObj.blendImgbyBlack2),  #Solves E8
+             (objs,blendImgObj,choices,blendImgObj.getFillFactorRowForSeparateHalves,blendImgObj.isValid_TwoRows_Comp_FirstLast,0.99,blendImgObj.getFirstLastImg),  #Solves E9
 
              #(objs,fillObj,choices,fillObj.getFillFactorRow,fillObj.isValid,10000)
              ]
@@ -240,14 +241,17 @@ class Agent:
                    #{'thresh':0.995,'blendFcn':blendImgObj.blendImgbyWhite,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRow},
                    #{'thresh':0.01,'blendFcn':blendImgObj.blendImgbyNumBlack,'validFcn':blendImgObj.isValid_byNumBlack,'fillRowFcn':blendImgObj.getFillFactorRow}
                    #{'thresh':0.995,'blendFcn':blendImgObj.blendImgbyOverlapBlack,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRow},
-                   {'thresh':0.995,'blendFcn':blendImgObj.blendImgbyBlack2,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRowMiddleLast},
+                   #{'thresh':0.995,'blendFcn':blendImgObj.blendImgbyBlack2,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRowMiddleLast},
+                   #{'thresh':0.99,'blendFcn':blendImgObj.blendImgbyBlack2,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRow}
+                   {'thresh':0.9995,'blendFcn':blendImgObj.getFirstLastImg,'validFcn':blendImgObj.isValid_TwoRows_Comp_FirstLast,'fillRowFcn':blendImgObj.getFillFactorRowForSeparateHalves}
+
                   ]
      tstArgs = [#{'fcn':ansOp.elimByPixels},
                 #{'fcn':ansOp.elimBySimilarity,'thresh':.05},
                 #{'fcn':ansOp.elimByFactor,'factor': checkFactor,'thresh':.02 },
                 #{'fcn':ansOp.elimByFirstColumn,'factor': checkFactor,'thresh':3, 'compIdx':0 }
                 #{'fcn':ansOp.elimByOneMinusTwo} # Solves E-4, doesn't work!!
-                {'fcn':ansOp.elimBySizeOrder,'refImgs':objsInv[0]} # Solves E-6
+                #{'fcn':ansOp.elimBySizeOrder,'refImgs':objsInv[1]} # Solves E-6
 
 
                ]
