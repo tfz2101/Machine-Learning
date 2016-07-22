@@ -222,7 +222,8 @@ class Agent:
              #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid,0.99,blendImgObj.blendImgbyOverlapBlack),  #Solves E5
              #(objsInv,blendImgObj,choices,blendImgObj.getFillFactorRowMiddleLast,blendImgObj.isValid,0.99,blendImgObj.blendImgbyBlack2),  #Solves E6 - need a method to eliminate
              #(objs,blendImgObj,choices,blendImgObj.getFillFactorRow,blendImgObj.isValid,0.90,blendImgObj.blendImgbyBlack2),  #Solves E8
-             (objs,blendImgObj,choices,blendImgObj.getFillFactorRowForSeparateHalves,blendImgObj.isValid_TwoRows_Comp_FirstLast,0.99,blendImgObj.getFirstLastImg),  #Solves E9
+             #(objs,blendImgObj,choices,blendImgObj.getFillFactorRowForSeparateHalves,blendImgObj.isValid_TwoRows_Comp_FirstLast,0.99,blendImgObj.getFirstLastImg),  #Solves E9
+             (objs,blendImgObj,choices,blendImgObj.getFillFactorQE12,blendImgObj.isValidQE12,0.01),  #Solves E12
 
              #(objs,fillObj,choices,fillObj.getFillFactorRow,fillObj.isValid,10000)
              ]
@@ -243,7 +244,8 @@ class Agent:
                    #{'thresh':0.995,'blendFcn':blendImgObj.blendImgbyOverlapBlack,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRow},
                    #{'thresh':0.995,'blendFcn':blendImgObj.blendImgbyBlack2,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRowMiddleLast},
                    #{'thresh':0.99,'blendFcn':blendImgObj.blendImgbyBlack2,'validFcn':blendImgObj.isValid,'fillRowFcn':blendImgObj.getFillFactorRow}
-                   {'thresh':0.9995,'blendFcn':blendImgObj.getFirstLastImg,'validFcn':blendImgObj.isValid_TwoRows_Comp_FirstLast,'fillRowFcn':blendImgObj.getFillFactorRowForSeparateHalves}
+                   #{'thresh':0.9995,'blendFcn':blendImgObj.getFirstLastImg,'validFcn':blendImgObj.isValid_TwoRows_Comp_FirstLast,'fillRowFcn':blendImgObj.getFillFactorRowForSeparateHalves}
+                   {'thresh':0.01,'validFcn':blendImgObj.isValidQE12,'fillRowFcn':blendImgObj.getFillFactorQE12,'blendFcn':blendImgObj.getFirstLastImg,}
 
                   ]
      tstArgs = [#{'fcn':ansOp.elimByPixels},
