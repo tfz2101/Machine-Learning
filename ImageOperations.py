@@ -537,19 +537,23 @@ class blendImgOp(transformOpBySetDiag):
         return blendArea
 
     def numImageRow(self,imgs):
+        out = []
         newImgs = imgs[:]
         for i in range(0,len(newImgs)):
             newImgs[i]= newImgs[i].convert(mode='1')
-        rowVal = self.getImgVal(newImgs)
-        return rowVal
+            (width,height)=newImgs[i].size
+            area = width*height
+            val = self.getImgVal([newImgs[i]])[0]
+            out.append(area - val)
+        return out
 
     def isTopHeavy(self,img):
-        segments = self.getSegments([img],2,1)
+        segments = self.getSegments(img,2,1)
         (width, height)=img.size
         area = width * height
-        valTop = self.getImgVal([segments[0]])
+        valTop = self.getImgVal([segments[0]])[0]
         blackAreaTop = area - valTop
-        valBottom = self.getImgVal([segments[1]])
+        valBottom = self.getImgVal([segments[1]])[0]
         blackAreaBottom = area - valBottom
         if blackAreaTop > blackAreaBottom:
             out = True
@@ -640,16 +644,18 @@ class blendImgOp(transformOpBySetDiag):
 
         return [topRow,bottomRow]
 
-    def getFillFactorQE12(self, imgs, blendFcn):
+    def getFillFactorQE12(self, imgs, blendFcn='filler'):
         #Assumes 3 images are being passed
         imgVals = self.numImageRow(imgs)
-        remainder = imgVals[0]-imgVals[1]-imgVals[2]
+        print('areas')
+        print(imgVals)
+        errorPct = float(abs(imgVals[0]-imgVals[1]-imgVals[2]))/imgVals[0]
 
         img0TopHeavy = self.isTopHeavy(imgs[0])
         img2TopHeavy = self.isTopHeavy(imgs[2])
 
 
-        return [remainder, img0TopHeavy==img2TopHeavy]
+        return [errorPct, img0TopHeavy==img2TopHeavy]
 
     def isValid(self,twoImgs,threshold=0.99):
         out = False
@@ -680,12 +686,11 @@ class blendImgOp(transformOpBySetDiag):
             out = True
         return out
 
-    def isValidQE12(self,twoImgs,threshold=0.99):
+    def isValidQE12(self,input,threshold=0.01):
         out = False
-        print('simiarlity')
-        print(self.similarity(twoImgs[0],twoImgs[1]))
-        if self.similarity(twoImgs[0],twoImgs[1]) >=threshold:
-            out = True
+        if input[0] <= threshold:
+            if input[1] == True:
+                out = True
         return out
 
     def compCandidate(self, imgs, choice, thresh,fillRowFcn,blendFcn,validFcn):
