@@ -596,6 +596,7 @@ class blendImgOp(transformOpBySetDiag):
                 elif combPix==510:
                     combPix = 255
                 im.putpixel((w,h),combPix)
+        im.save('L:\OMSCS\KBAI\Project-Code-Python\Problems\orig.JPEG','JPEG')
         return im
 
     def getFirstLastImg(self,row):
@@ -665,6 +666,17 @@ class blendImgOp(transformOpBySetDiag):
             out = True
         return out
 
+    def isValid_imgSimilarity(self,twoImgs,threshold=0.99):
+        out = False
+        (width, height) = twoImgs[0].size
+        area = width*height
+        print('simiarlity')
+        print(self.imgSimilarity(twoImgs[0],twoImgs[1]))
+        if self.imgSimilarity(twoImgs[0],twoImgs[1]) >=threshold:
+            out = True
+            twoImgs[1].save('L:\OMSCS\KBAI\Project-Code-Python\Problems\err','JPEG')
+        return out
+
     def isValid_TwoRows_Comp_FirstLast(self,twoRows,threshold=0.99):
         out = True
         for row in twoRows:
@@ -692,6 +704,24 @@ class blendImgOp(transformOpBySetDiag):
             if input[1] == True:
                 out = True
         return out
+
+    def imgSimilarity(self,im1,im2):
+        (width, height) = im1.size
+        countImg = im1.copy()
+        img1 = im1.convert(mode='1')
+        img2 = im2.convert(mode='1')
+        for i in range(0,width):
+            for j in range(0,height):
+                p1 = img1.getpixel((i,j))
+                p2 = img2.getpixel((i,j))
+                if p1==p2:
+                    countImg.putpixel((i,j),255)
+                else:
+                    countImg.putpixel((i,j),0)
+        similarity = self.getImgVal([countImg])
+        similarity = float(similarity[0])/(width*height)
+
+        return similarity
 
     def compCandidate(self, imgs, choice, thresh,fillRowFcn,blendFcn,validFcn):
           out = False
@@ -729,6 +759,7 @@ class answerOp(transformOp):
 
         return out
 
+
     def elimBySizeOrder(self,answerDict,refImgs):
         out = answerDict.copy()
         refVal = self.getImgVal(refImgs)
@@ -748,20 +779,52 @@ class answerOp(transformOp):
         print(out)
         return out
 
-    def elimByOneMinusTwo(self,answerDict,thresh=0.01):
+    def elimByNoDuplicates(self,answerDict,refImgs,thresh=0.0005):
         out = answerDict.copy()
-        for a in answerDict:
-            tempEdge = self.getEdgeOnlyRow(answerDict[a])
-            tempEdge2 = self.getBlackAndWhiteRow(tempEdge)
-            tmpVal = self.getImgVal(tempEdge2)
-            print('temp vals')
-            print(tmpVal)
-            print('error')
-            print(float(abs(tmpVal[0]-tmpVal[1])))
-            if float(abs(tmpVal[0]-tmpVal[1]-tmpVal[2]))/tmpVal[0]>thresh:
-                del out[a]
-        print('elim result')
-        print(out)
+        refVal = self.getImgVal(refImgs)
+        refOrdered = sorted(refVal)
+        refDupl = True
+        for i in range(0,len(refOrdered)-1):
+            if float(abs(refOrdered[i]-refOrdered[i+1]))/refOrdered[i] <= thresh:
+                refDupl = False
+                break
+
+        print('ref order')
+        print(refOrdered)
+        print('gooon?')
+        print(refDupl)
+        if refDupl:
+            for a in answerDict:
+                aVal = self.getImgVal(answerDict[a])
+                rowOrdered = sorted(aVal)
+                print('rowOrder')
+                print(a)
+                print(rowOrdered)
+                for i in range(0,len(rowOrdered)-1):
+                    print('ratio')
+                    print(float(abs(rowOrdered[i]-rowOrdered[i+1]))/rowOrdered[i])
+                    if float(abs(rowOrdered[i]-rowOrdered[i+1]))/rowOrdered[i] <= thresh:
+                        del out[a]
+                        break
+
+
+        return out
+
+    def elimByImgByNumBlack(self,answerDict,colImgs,refImgs,thresh, blendFcn, validFcn, fillRowFcn):
+        out = answerDict.copy()
+        refRow = fillRowFcn(refImgs,blendFcn)
+        goOn = validFcn(refRow,thresh)
+        print('goOn')
+        print(goOn)
+        if goOn:
+            for a in answerDict:
+                newChoice = colImgs[:]
+                newChoice.append(answerDict[a][2])
+                row = fillRowFcn(newChoice,blendFcn)
+                print('row___True??')
+                print(validFcn(row,thresh))
+                if validFcn(row,thresh) == False:
+                    del out[a]
         return out
 
     def elimBySimilarity(self,answerDict,thresh=0.05):
