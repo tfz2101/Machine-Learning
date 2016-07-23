@@ -561,6 +561,7 @@ class blendImgOp(transformOpBySetDiag):
             out = False
         return out
 
+
     def blendImgbyOverlapBlack(self,im1,im2):
         im = im1.copy()
         im1 = im1.convert(mode='1')
@@ -596,7 +597,6 @@ class blendImgOp(transformOpBySetDiag):
                 elif combPix==510:
                     combPix = 255
                 im.putpixel((w,h),combPix)
-        im.save('L:\OMSCS\KBAI\Project-Code-Python\Problems\orig.JPEG','JPEG')
         return im
 
     def getFirstLastImg(self,row):
@@ -610,6 +610,35 @@ class blendImgOp(transformOpBySetDiag):
         blend = blendFcn(imgs[0],imgs[1])
         out = [blend,imgs[2]]
         return out
+
+    def sortImgsByBlack(self,imgs):
+        rowVal = self.getImgVal(imgs)
+        rowDict = dict(zip(rowVal,imgs))
+        print('rowdict')
+        print(rowDict)
+        rowKeySorted = sorted(rowVal,reverse=True)
+        print('rowKeySorted')
+        print(rowKeySorted)
+        out = []
+        for i in rowKeySorted:
+            out.append(rowDict[i])
+
+        return out
+
+    def getFillFactorRowSort(self, imgs, blendFcn):
+        #Assumes 3 images are being passed
+        rowVal = self.getImgVal(imgs)
+        rowDict = dict(zip(rowVal,imgs))
+        print('rowdict')
+        print(rowDict)
+        rowKeySorted = sorted(rowVal,reverse=True)
+        print('rowKeySorted')
+        print(rowKeySorted)
+        blend = blendFcn(rowDict[rowKeySorted[0]],rowDict[rowKeySorted[1]])
+        blend.save('L:\OMSCS\KBAI\Project-Code-Python\Problems\sample.jpeg','JPEG')
+        out = [blend,rowDict[rowKeySorted[len(rowKeySorted)-1]]]
+        return out
+
 
     def getFillFactorRowMiddleLast(self, imgs, blendFcn):
         #Assumes 3 images are being passed
@@ -668,13 +697,10 @@ class blendImgOp(transformOpBySetDiag):
 
     def isValid_imgSimilarity(self,twoImgs,threshold=0.99):
         out = False
-        (width, height) = twoImgs[0].size
-        area = width*height
         print('simiarlity')
         print(self.imgSimilarity(twoImgs[0],twoImgs[1]))
         if self.imgSimilarity(twoImgs[0],twoImgs[1]) >=threshold:
             out = True
-            twoImgs[1].save('L:\OMSCS\KBAI\Project-Code-Python\Problems\err','JPEG')
         return out
 
     def isValid_TwoRows_Comp_FirstLast(self,twoRows,threshold=0.99):
@@ -842,6 +868,23 @@ class answerOp(transformOp):
                 del out[a]
 
         return out
+
+    def elimByImgSimilarityTopHalf(self,answerDict,thresh=.90):
+        out = answerDict.copy()
+        blendObj = blendImgOp('filler')
+        for a in answerDict:
+            seg1 = self.getSegments(answerDict[a][0],2,1)[0]
+            seg2 = self.getSegments(answerDict[a][2],2,1)[0]
+
+            sim = blendObj.imgSimilarity(seg1,seg2)
+            print('sim')
+            print(sim)
+            if sim <= thresh:
+                del out[a]
+        print('out')
+        print(out)
+        return out
+
 
 
     def elimByFactor(self,answerDict,factor,thresh=0.02):
