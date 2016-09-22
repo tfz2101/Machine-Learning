@@ -5,6 +5,34 @@ A simple wrapper for linear regression.  (c) 2015 Tucker Balch
 import numpy as np
 import pandas as pd
 
+class PERT(object):
+    def __init__(self):
+        pass
+
+
+    def split(self,data,start, end, candidates):
+        colSplit = np.random.choice(candidates)
+        print("colSplit")
+        print(colSplit)
+
+        elements = np.random.choice((start,end),2, replace=False)
+        print('elements')
+        print(elements)
+        mean = (data.ix[elements[0],colSplit]+data.ix[elements[1],colSplit])/2
+        print(mean)
+        newCol = colSplit + "_split"
+        for i in range(start, (end+1)):
+            if data.ix[i,colSplit] >= mean:
+                data.ix[i,newCol]=1
+            else:
+                data.ix[i,newCol]=0
+
+        print(data)
+        return data
+
+
+
+
 class RTLearner(object):
 
     def __init__(self, leaf_size=1, verbose = False):
@@ -24,9 +52,15 @@ class RTLearner(object):
         @param dataY: the Y training values
         """
         data = self.getPDData()
+        dt = PERT()
+        candidates = data.columns.values
+        candidates =  np.delete(candidates,len(candidates)-1)
+        print("candidates")
+        print(candidates)
+        dt.split(data,0,data.shape[0]-1,candidates)
 
-        split = np.random.randint(0,data.shape[1]-1)
-        
+
+
 
         '''
         # slap on 1s column so linear regression finds a constant term
