@@ -10,35 +10,64 @@ class PERT(object):
         pass
 
 
-    def split(self,data,start, end, candidates):
-        colSplit = np.random.choice(candidates)
+    def split(self,data,start, end, candidates, givenCol = "null"):
+
+        if givenCol == "null":
+            colSplit = givenCol
+        else:
+            colSplit = np.random.choice(candidates)
+
         print("colSplit")
         print(colSplit)
 
-        elements = np.random.choice((start,end),2, replace=False)
+        elements = np.random.choice(range(start,end),2, replace=False)
         print('elements')
         print(elements)
+
+        print(data[colSplit])
+        print('element1')
+        print(data.ix[elements[0],colSplit])
+        print('element2')
+        print(data.ix[elements[1],colSplit])
         mean = (data.ix[elements[0],colSplit]+data.ix[elements[1],colSplit])/2
         print(mean)
         newCol = colSplit + "_split"
         for i in range(start, (end+1)):
+            #print('iteration')
+            #print(data.ix[i,colSplit])
             if data.ix[i,colSplit] >= mean:
                 data.ix[i,newCol]=1
             else:
                 data.ix[i,newCol]=0
 
 
-        data = data.sort(colSplit, axis=0, ascending=False)
+        data = data.sort_values(colSplit, axis=0, ascending=False)
         splitInd = data[newCol].sum()
         split1 = data.iloc[0:(splitInd-1),:]
+        split1 = pd.DataFrame(split1.as_matrix(), columns=split1.columns.values)
         split2 = data.iloc[splitInd:data.shape[0],:]
+        split2 = pd.DataFrame(split2.as_matrix(),columns=split2.columns.values)
+        print('split11111')
         print(split1)
-        print(split2)
         splitInfo = [colSplit,mean]
         return split1, split2, splitInfo
 
 
+class Node(object):
+    def __init__(self, column='Null',mean=0, aboveNode=None, belowNode=None):
+        self.column = column
+        self.mean = mean
+        self.aboveNode = aboveNode
+        self.belowNode = belowNode
 
+    def get_next(self, value):
+        out = np.nan
+        if value >= self.mean:
+            out = self.aboveNode
+
+        else:
+            out = self.belowNode
+        return out
 
 class RTLearner(object):
 
@@ -47,9 +76,9 @@ class RTLearner(object):
         self.verbose = verbose
 
     def getPDData(self):
-        data = pd.read_csv("C:\Users\Frank Zhi\Desktop\Python Work\MLT\ML4T_2016Fall-master\ML4T_2016Fall-master\mc3_p1\Data\winequality-white.csv",sep=',')
+        data = pd.read_csv("L:\OMSCS\MLT\ML4T_2016Fall-master\mc3_p1\Data\winequality-white.csv",sep=',')
         data =  pd.DataFrame(data)
-        print(data)
+
         return data
 
     def addEvidence(self,dataX=0,dataY=0):
@@ -60,24 +89,39 @@ class RTLearner(object):
         """
         data = self.getPDData()
         dt = PERT()
+        n = Node()
         candidates = data.columns.values
         candidates =  np.delete(candidates,len(candidates)-1)
         print("candidates")
         print(candidates)
-        df1, df2, node = dt.split(data,0,data.shape[0]-1,candidates)
-        candidates =  np.delete(candidates,node[0])
+
+        dataObj = [data]
 
 
 
+        for i in range(0,1):
+            colSplit = np.random.choice(candidates)
+            newdataobj = []
+            for obj in dataObj:
 
-        '''
-        # slap on 1s column so linear regression finds a constant term
-        newdataX = np.ones([dataX.shape[0],dataX.shape[1]+1])
-        newdataX[:,0:dataX.shape[1]]=dataX
+                df1, df2, node = dt.split(obj,0,obj.shape[0]-1,candidates, colSplit)
+                if df1.shape[0] < self.leaf_size or df2.shape[0] < self.leaf_size:
+                    bignp = np.concatenate((df1.as_matrix(),df2.as_matrix()),axis=0)
+                    bigdf =pd.DataFrame(bignp, columns = df1.columns.values)
+                    print('bigdf')
+                    print(bigdf)
+                    newdataobj.append(bigdf)
+                else:
+                    newdataobj.append(df1)
+                    newdataobj.append(df2)
 
-        # build and save the model
-        self.model_coefs, residuals, rank, s = np.linalg.lstsq(newdataX, dataY)
-        '''
+            dataObj =  newdataobj
+            candidates = np.extract(candidates!=node[0],candidates)
+            candidates =  candidates.tolist()
+
+            print('candidates')
+            print(candidates)
+            print(dataObj)
 
 
     def query(self,points):
@@ -88,8 +132,10 @@ class RTLearner(object):
         """
         return (self.model_coefs[:-1] * points).sum(axis = 1) + self.model_coefs[-1]
 
+'''
 if __name__=="__main__":
     print "the secret clue is 'zzyzx'"
+'''
 
-test = RTLearner()
+test = RTLearner(leaf_size=4000)
 test.addEvidence()
