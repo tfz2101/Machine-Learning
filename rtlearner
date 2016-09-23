@@ -27,8 +27,15 @@ class PERT(object):
             else:
                 data.ix[i,newCol]=0
 
-        print(data)
-        return data
+
+        data = data.sort(colSplit, axis=0, ascending=False)
+        splitInd = data[newCol].sum()
+        split1 = data.iloc[0:(splitInd-1),:]
+        split2 = data.iloc[splitInd:data.shape[0],:]
+        print(split1)
+        print(split2)
+        splitInfo = [colSplit,mean]
+        return split1, split2, splitInfo
 
 
 
@@ -40,7 +47,7 @@ class RTLearner(object):
         self.verbose = verbose
 
     def getPDData(self):
-        data = pd.read_csv("L:\OMSCS\MLT\ML4T_2016Fall-master\mc3_p1\Data\winequality-white.csv",sep=',')
+        data = pd.read_csv("C:\Users\Frank Zhi\Desktop\Python Work\MLT\ML4T_2016Fall-master\ML4T_2016Fall-master\mc3_p1\Data\winequality-white.csv",sep=',')
         data =  pd.DataFrame(data)
         print(data)
         return data
@@ -57,7 +64,8 @@ class RTLearner(object):
         candidates =  np.delete(candidates,len(candidates)-1)
         print("candidates")
         print(candidates)
-        dt.split(data,0,data.shape[0]-1,candidates)
+        df1, df2, node = dt.split(data,0,data.shape[0]-1,candidates)
+        candidates =  np.delete(candidates,node[0])
 
 
 
