@@ -16,10 +16,11 @@ if __name__=="__main__":
         sys.exit(1)
 '''
 dir1 = "C:\Users\Frank Zhi\Desktop\Python Work\MLT\ML4T_2016Fall-master\ML4T_2016Fall-master\mc3_p1\Data\winequality-white.csv"
-inf = open(dir1) #open(sys.argv[1])
+dir2 = "L:\OMSCS\MLT\ML4T_2016Fall-master\mc3_p1\Data\winequality-white.csv"
+inf = open(dir2) #open(sys.argv[1])
 data = np.array([map(float,s.strip().split(',')) for s in inf.readlines()])
 
-
+'''
 # compute how much of the data is training and testing
 sample_size =200
 #train_rows = math.floor(0.6* data.shape[0])
@@ -67,7 +68,7 @@ print "Out of sample results"
 print "RMSE: ", rmse
 c = np.corrcoef(predY, y=testY)
 print "corr: ", c[0,1]
-
+'''
 
 
 
@@ -80,12 +81,13 @@ print "corr: ", c[0,1]
 insample_data = pd.DataFrame(columns=['leaf_size','rmse','correlation'])
 outsample_data = pd.DataFrame(columns=['leaf_size','rmse','correlation'])
 
-for leaf_size in range(10,11,1):
+for leaf_size in range(1,2,1):
     # compute how much of the data is training and testing
     #train_rows = math.floor(0.6* data.shape[0])
-    train_rows = math.floor(0.6* 300)
+    sample_size = len(data)
+    train_rows = math.floor(0.6* sample_size)
     #test_rows = data.shape[0] - train_rows
-    test_rows = 300 - train_rows
+    test_rows = sample_size - train_rows
     # separate out training and testing data
     trainX = data[:train_rows,0:-1]
     trainY = data[:train_rows,-1]
@@ -95,6 +97,8 @@ for leaf_size in range(10,11,1):
     # create a learner and train it
     learner = rt.RTLearner(leaf_size =  leaf_size) # create a LinRegLearner
     learner.addEvidence(trainX, trainY) # train it
+
+
 
     # evaluate in sample
     predY = learner.query(trainX) # get the predictions
@@ -114,6 +118,7 @@ for leaf_size in range(10,11,1):
 
 print(insample_data)
 print(outsample_data)
+'''
 
 
 #---------------------
@@ -121,15 +126,16 @@ print(outsample_data)
 insample_data = pd.DataFrame(columns=['leaf_size','rmse','correlation'])
 outsample_data = pd.DataFrame(columns=['leaf_size','rmse','correlation'])
 
-for bags in range(1,11,9):
+for bags in range(40,81,20):
 
-    leaf_size=1
+    leaf_size=10
 
     # compute how much of the data is training and testing
     #train_rows = math.floor(0.6* data.shape[0])
-    train_rows = math.floor(0.6* 300)
+    sample_size = 500
+    train_rows = math.floor(0.6* sample_size)
     #test_rows = data.shape[0] - train_rows
-    test_rows = 300 - train_rows
+    test_rows = sample_size - train_rows
     # separate out training and testing data
     trainX = data[:train_rows,0:-1]
     trainY = data[:train_rows,-1]
@@ -146,7 +152,7 @@ for bags in range(1,11,9):
     rmse = math.sqrt(((trainY - predY) ** 2).sum()/trainY.shape[0])
     c = np.corrcoef(predY, y=trainY)
     corr = c[0,1]
-    in_sample = pd.DataFrame([[leaf_size,rmse,corr]],columns = insample_data.columns.values)
+    in_sample = pd.DataFrame([[bags,rmse,corr]],columns = insample_data.columns.values)
     insample_data = pd.concat([insample_data,in_sample],axis=0,ignore_index=True)
 
     # evaluate out of sample
@@ -154,9 +160,8 @@ for bags in range(1,11,9):
     rmse = math.sqrt(((testY - predY) ** 2).sum()/testY.shape[0])
     c = np.corrcoef(predY, y=testY)
     corr = c[0,1]
-    out_sample = pd.DataFrame([[leaf_size,rmse,corr]],columns=outsample_data.columns.values)
+    out_sample = pd.DataFrame([[bags,rmse,corr]],columns=outsample_data.columns.values)
     outsample_data = pd.concat([outsample_data,out_sample],axis=0,ignore_index=True)
 
 print(insample_data)
 print(outsample_data)
-'''
