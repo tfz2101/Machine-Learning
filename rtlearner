@@ -98,7 +98,7 @@ class RTLearner(object):
         @param dataY: the Y training values
         """
 
-        data = self.getPDData()
+        #data = self.getPDData()
 
         cols = range(0,len(dataX[0]))
 
@@ -176,8 +176,8 @@ class RTLearner(object):
                     down.assign_y(down.data[Y].mean())
                     leaves.append(down)
                 elif self.isLeaf(down,Y):
-                    print('down mean')
-                    print(down.data[Y].mean())
+                    #print('down mean')
+                    #print(down.data[Y].mean())
                     down.assign_y(down.data.ix[0,Y])
                     leaves.append(down)
                 else:
