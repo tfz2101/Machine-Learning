@@ -9,63 +9,46 @@ class PERT(object):
     def __init__(self):
         pass
 
-    def split(self,data,start, end, candidates, givenCol = "null"):
+    def split(self,data,start, end, candidates):
 
-        if givenCol == "null":
-            colSplit = givenCol
-        else:
-            colSplit = np.random.choice(candidates)
-
-        #print("colSplit")
-        #print(colSplit)
-
+        colSplit = np.random.choice(candidates)
         elements = np.random.choice(range(start,end+1),2, replace=False)
 
-        #print('element1')
-        #print(data.ix[elements[0],colSplit])
-        #print('element2')
-        #print(data.ix[elements[1],colSplit])
 
-        mean = (data.ix[elements[0],colSplit]+data.ix[elements[1],colSplit])/2
-        #print('mean')
-        #print(mean)
-        newCol = str(colSplit) + "_split"
+        mean = (data[elements[0],colSplit]+data[elements[1],colSplit])/2
+        newCol = np.empty([len(data),1])
         for i in range(start, (end+1)):
-            if data.ix[i,colSplit] >= mean:
-                data.ix[i,newCol]=1
+            if data[i,colSplit] >= mean:
+                newCol[i]=1
             else:
-                data.ix[i,newCol]=0
+                newCol[i]=0
 
-
-        data = data.sort(colSplit, axis=0, ascending=False)
-        splitInd = data[newCol].sum()
-        data = data.drop(newCol,axis=1)
-        split1 = data.iloc[0:splitInd,:]
-        split1 = pd.DataFrame(split1.as_matrix(), columns=split1.columns.values)
-        split2 = data.iloc[splitInd:data.shape[0],:]
-        split2 = pd.DataFrame(split2.as_matrix(),columns=split2.columns.values)
+        data =  np.column_stack((data,newCol))
+        data = data.tolist()
+        data =  sorted(data,key=lambda x: x[len(data[0])-1],reverse=True)
+        data= np.array(data)
+        splitInd = np.sum(data[:,(len(data[0])-1)])
+        data = data[:,0:(len(data[0])-1)]
+        split1 = data[0:splitInd,:]
+        split2 = data[splitInd:len(data),:]
         splitInfo = [colSplit,mean]
-        '''
-        print('split1')
-        print(split1)
-        print('split2')
-        print(split2)
-        '''
         return split1, split2, splitInfo
 
 
 class Node(object):
     def __init__(self, data):
         self.data = data
-        self.history = pd.DataFrame(columns=['column','mean','upOrBottom'])
+        #self.history = pd.DataFrame(columns=['column','mean','upOrBottom'])
+        self.history = []
 
     def update_hist(self, value):
-        value1 =  pd.DataFrame([value],columns=['column','mean','upOrBottom'])
-        out  = pd.concat([self.history,value1],axis=0,ignore_index=True)
-        self.history = out
+        #value1 =  pd.DataFrame([value],columns=['column','mean','upOrBottom'])
+        #out  = pd.concat([self.history,value1],axis=0,ignore_index=True)
+        self.history.append(value)
+
 
     def copy_hist(self,hist):
-        self.history = hist
+        self.history = hist[:]
 
     def assign_y(self,Y):
         self.Y = Y
@@ -84,7 +67,7 @@ class RTLearner(object):
         return data
 
     def isLeaf(self,Node, Y):
-        out  =Node.data[Y].unique()
+        out  =np.unique(Node.data[:,Y])
         if len(out) ==1:
             res =  True
         else:
@@ -98,87 +81,64 @@ class RTLearner(object):
         @param dataY: the Y training values
         """
 
-        #data = self.getPDData()
-
-        cols = range(0,len(dataX[0]))
-
-        index = range(0,len(dataY))
-
-        dX = pd.DataFrame(dataX,index = index)
-        dY = pd.DataFrame(dataY, index = index)
-
-        data = pd.concat([dX, dY],axis=1)
-        data.columns = range(0,data.shape[1])
-
-        #print(data)
-
+        data  = np.column_stack((dataX, dataY))
         dt = PERT()
-        self.columns = data.columns.values
+        self.columns = np.array(range(0,len(data[0])))
 
+        count = 0
+        dict = {}
+        for a in self.columns:
+            dict[a]=count
+            count = count+1
+        self.dict = dict
 
-        Y = data.columns.values
-        Y = Y[len(Y)-1]
-        data1 = data.iloc[0:500,:]
-        #data2 = data1.as_matrix()
-        #data1 = pd.DataFrame(data2,columns=data1.columns.values)
-        #temp = Node(data1)
-        #print(temp.data)
+        #Y = data.columns.values
+        #Y = Y[len(Y)-1]
+        Y = len(data[0])-1
 
-        #!!!!!CHANGE BACK!!!!!!
-        data = data1
-
-
-        candidates = data.columns.values
-        candidates =  np.delete(candidates,len(candidates)-1)
-
+        candidates =  np.delete(self.columns,len(self.columns)-1)
 
         n = Node(data)
         dataObj = [n]
         leaves = []
 
 
-
         while len(dataObj)>0:
             newdataobj = []
             for obj in dataObj:
-                colSplit = np.random.choice(candidates)
 
                 if self.isLeaf(obj,Y) ==True:
-                    obj.assign_y(obj.data.ix[0,Y])
+                    obj.assign_y(obj.data[0,Y])
                     leaves.append(obj)
                     dataObj.remove(obj)
                     continue
 
-                #print('object data')
-                #print(obj.data)
-                df1, df2, node = dt.split(obj.data,0,obj.data.shape[0]-1,candidates, colSplit)
-                if (df1.shape[0])== 0 or (df2.shape[0]==0):
+                df1, df2, node = dt.split(obj.data,0,len(obj.data)-1,candidates)
+                if (len(df1))== 0 or (len(df2)==0):
                     newdataobj.append(obj)
                     continue
                 up = Node(df1)
                 up.copy_hist(obj.history)
                 up_hist = [node[0],node[1],1]
                 up.update_hist(up_hist)
-                if df1.shape[0] < self.leaf_size:
-                    up.assign_y(up.data[Y].mean())
+
+                if len(df1) < self.leaf_size:
+                    up.assign_y(up.data[:,Y].mean())
                     leaves.append(up)
                 elif self.isLeaf(up,Y):
-                    up.assign_y(up.data.ix[0,Y])
+                    up.assign_y(up.data[0,Y])
                     leaves.append(up)
                 else:
                     newdataobj.append(up)
-
                 down = Node(df2)
                 down.copy_hist(obj.history)
                 down_hist = [node[0],node[1],0]
                 down.update_hist(down_hist)
-                if df2.shape[0] < self.leaf_size:
-                    down.assign_y(down.data[Y].mean())
+                if len(df2) < self.leaf_size:
+                    down.assign_y(down.data[:,Y].mean())
                     leaves.append(down)
                 elif self.isLeaf(down,Y):
-                    #print('down mean')
-                    #print(down.data[Y].mean())
-                    down.assign_y(down.data.ix[0,Y])
+                    down.assign_y(down.data[0,Y])
                     leaves.append(down)
                 else:
                     newdataobj.append(down)
@@ -186,14 +146,54 @@ class RTLearner(object):
             dataObj =  newdataobj
 
         self.model = leaves
-        '''
-        print('print out hists')
-        for o in leaves:
-            print(o.Y)
-        print('print out remainin')
-        for o in dataObj:
-            print(o.history)
-        '''
+        #for l in leaves:
+        #    l.history = np.array(l.history)
+
+    def loopThruRTHistory(self,leaf,point):
+        dict = self.dict
+        out = False
+        if point[dict[leaf[0]]]>=leaf[1]:
+            ans = 1
+        else:
+            ans = 0
+        if (ans == leaf[2]):
+            out = True
+        else:
+            out = False
+        return out
+
+
+    def loopThruRTLearner(self, point):
+        out = 0
+        dict = self.dict
+        if len(self.model) ==1:
+                out =  self.model[0].Y
+        else:
+            for a in self.model:
+                hist = a.history
+                breaker = False
+                #loop = np.apply_along_axis(self.loopThruRTHistory,1,hist,point)
+                #if all(loop):
+                #    out =  a.Y
+                #    break
+
+                for i in range(0,len(hist)):
+                    if point[dict[hist[i][0]]]>=hist[i][1]:
+                        ans = 1
+                    else:
+                        ans = 0
+                    if (ans == hist[i][2]) and (i == (len(hist)-1)):
+                        out = a.Y
+                        breaker = True
+                        break
+                    if ans != hist[i][2]:
+                        break
+
+                if breaker==True:
+                    break
+
+
+        return out
 
     def query(self,points):
         """
@@ -201,65 +201,41 @@ class RTLearner(object):
         @param points: should be a numpy array with each row corresponding to a specific query.
         @returns the estimated values according to the saved model.
         """
-        count = 0
-        dict = {}
-        for a in self.columns:
-            dict[a]=count
-            count = count+1
 
+
+        preds = np.apply_along_axis(self.loopThruRTLearner,1,points)
+
+        '''
         preds = []
         for point in points:
-            for a in self.model:
-                hist = a.history
-                breaker = False
-                for i in range(0,hist.shape[0]):
-                    #print(point[dict[hist.ix[i,'column']]])
-                    #print(dict[hist.ix[i,'column']])
-                    #print(point[dict[hist.ix[i,'column']]])
-                    #print('hist mean')
-                    #print(hist.ix[i,'mean'])
-                    if point[dict[hist.ix[i,'column']]]>=hist.ix[i,'mean']:
-                        ans = 1
-                    else:
-                        ans = 0
-                    #print('ans')
-                    #print(ans)
-                    #print('upOrBottom')
-                    #print(hist.ix[i,'upOrBottom'])
-                    if (ans == hist.ix[i,'upOrBottom']) and (i == (hist.shape[0]-1)):
-                        #print('hist length')
-                        #print(hist.shape[0])
-                        #print('i')
-                        #print(i)
-                        preds.append(a.Y)
-                        breaker = True
+
+            if len(self.model) ==1:
+                preds.append(self.model[0].Y)
+            else:
+                for a in self.model:
+                    hist = a.history
+                    breaker = False
+                    for i in range(0,len(hist)):
+                        if point[dict[hist[i,0]]]>=hist[i,1]:
+                            ans = 1
+                        else:
+                            ans = 0
+                        if (ans == hist[i,2]) and (i == (len(hist)-1)):
+                            preds.append(a.Y)
+                            breaker = True
+                            break
+                        if ans != hist[i,2]:
+                            break
+
+                    if breaker==True:
                         break
-                    if ans != hist.ix[i,'upOrBottom']:
-                        break
+            '''
 
-                if breaker==True:
-                    break
+        return preds
 
 
 
-
-        #print(preds)
-
-        return np.array(preds)
-        #return (self.model_coefs[:-1] * points).sum(axis = 1) + self.model_coefs[-1]
-
-'''
 if __name__=="__main__":
     print "the secret clue is 'zzyzx'"
-'''
 
-'''
-test = RTLearner(leaf_size=1)
-test.addEvidence()
-test.query([[1,2,3,4,5,6,7,8,9,10,11],[0,0,0,0,0,0,0,0,0,0,11]])
 
-data = test.getPDData()
-bags = Bagger()
-bag = bags.getBag(data,30)
-print(bag)
-'''
