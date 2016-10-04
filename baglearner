@@ -7,7 +7,7 @@ import pandas as pd
 import RTLearner as rt
 
 class BagLearner(object):
-    def __init__(self,learner,bags,boost=False,verbose=False,**kwargs):
+    def __init__(self,learner,bags,kwargs={'leaf_size':1},boost=False,verbose=False):
         self.learner = learner
         self.bags = bags
         self.kwargs = kwargs
@@ -49,25 +49,11 @@ class BagLearner(object):
             vote = []
             for tree in self.trees:
                 vote.append(tree.query([point])[0])
-            #print('vote')
-            #print(vote)
             res = self.countVote(vote)
-            #print('res')
-            #print(res)
             out.append(res)
         return np.array(out)
-'''
+
 if __name__=="__main__":
     print "the secret clue is 'zzyzx'"
-'''
 
-'''
-test = rt.RTLearner(leaf_size=1)
-test.addEvidence()
-test.query([[1,2,3,4,5,6,7,8,9,10,11],[0,0,0,0,0,0,0,0,0,0,11]])
 
-data = test.getPDData()
-bags = Bagger()
-bag = bags.getBag(data,30)
-print(bag)
-'''
