@@ -63,6 +63,27 @@ del t[0]
 t.remove('c')
 #print(t)
 
+#Sort
+b = np.array([[1,2,3], [4,5,6], [7,8,9]])
+b = b.tolist()
+b = sorted(b,key= lambda x: x[1],reverse=True)
+print(b)
+
+
+
+'''dateTime Class/time Class'''
+#convert string to time object
+date = '2001-12-01'
+import datetime as datetime
+date = datetime.strptime(date,'%Y-%m-%d')
+#print(date)
+
+#Access Year/Month/Day in Time object
+import time as time
+timeaccess = time.struct_time(date)
+year = timeaccess.tm_year
+month = timeaccess.tm_mon
+
 
 '''PANDAS'''
 #List into DataFrame
@@ -139,15 +160,31 @@ class MyClass(object):
         pass
 
     def __str__(self):
+        #String representation of the object, used by the print() method
         pass
 
     def __str__(self, param):
+        #Overloaded version of the Str() method
         pass
+
+    def __lt__(self, other):
+        #Same as < boolean operator (Less Than)
+        pass
+
+    def __ge__(self, other):
+        #Same as >= operator (Greater Than or Equals)
+        pass
+
     def __add__(self, other):
         pass
 
     def __cmp__(self, other):
         pass
+
+#Object is the Superclass for every class
+print('Base Class')
+print(MyClass.__class__.__base__)
+
 
 
 '''NUMPY'''
@@ -192,3 +229,12 @@ mean =  arr.mean(axis=1)
 mean = mean.reshape((2,1))
 scaled = arr - mean
 print(scaled)
+
+
+#Apply Along Axis
+def my_func(a):
+
+    return a[0]
+
+b = np.array([[1,2,3], [4,5,6], [7,8,9]])
+print(np.apply_along_axis(my_func,1,b))
