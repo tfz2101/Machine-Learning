@@ -26,11 +26,9 @@ def compute_portvals(orders_file = "./orders/orders.csv", start_val = 1000000):
     #TODO: Your code here
     #FIXME: ??
 
-    orders = pd.read_csv(orders_file,sep=',')
-
-    lastOrderRow = orders.shape[1]
-    for day in orders['Date']:
-        day = dt.datetime.strptime(day,'%Y-%m-%d')
+    orders = pd.read_csv(orders_file,sep=',',parse_dates = [0], infer_datetime_format=True)
+    print(orders)
+    lastOrderRow = orders.shape[0]
 
 
     startDate = orders.ix[0,'Date']
@@ -39,16 +37,38 @@ def compute_portvals(orders_file = "./orders/orders.csv", start_val = 1000000):
 
     portVals = pd.DataFrame(index=datesIndex,columns=['Date','Value'])
     lastPortRow = portVals.shape[0]
+    print("portVals")
+    print(portVals)
+
+    '''
+    for day in portVals.index.values:
+        day = pd.Timestamp(day).to_pydatetime()
+        #print(type(day))
+    '''
 
     book = pd.DataFrame([['AAPL',1,120,120],['IBM',3,10,30]], columns=['Symbol','Position','Price','Value'])
     print('Book')
     print(book)
 
+    orderTracker = 0
 
-    for i in range(0,lastPortRow):
-        if day == orders.ix[i,'Date']:
-            print(day)
+    for day in portVals.index.values:
+        for i in range(orderTracker,lastOrderRow):
+            if pd.Timestamp(day).to_pydatetime() == orders.ix[orderTracker,'Date'].to_datetime():
+                #print('day')
+                #print(day)
+                #print(orders.ix[orderTracker,'Date'])
+                print('oder today!')
+                print(orders.ix[orderTracker,'Symbol'])
+                #print('order symbol')
+                #print(orders.ix[orderTracker,'Symbol'])
+                #print('book symbol')
+                #print(book.ix[1,'Symbol'])
+                if orders.ix[orderTracker,'Symbol'] ==book['Symbol'].any(): #in book['Symbol']:
+                    print('already in book')
+                    print(orders.ix[orderTracker,'Symbol'])
 
+                orderTracker = orderTracker + 1
     '''
     # In the template, instead of computing the value of the portfolio, we just
     # read in the value of IBM over 6 months
@@ -67,7 +87,7 @@ def test_code():
     # note that during autograding his function will not be called.
     # Define input parameters
 
-    of = "./orders/orders2.csv"
+    of = "./orders/orders.csv"
     sv = 1000000
 
     # Process orders
