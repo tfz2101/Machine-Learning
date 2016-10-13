@@ -16,7 +16,24 @@ def calcBookMV(book):
 
 def updatBook(book,order):
 
-    #returns updated book
+    if order['Symbol'] in book['Symbol'].tolist():
+        if order['Order'] == 'BUY':
+            idx = book.ix[book['Symbol']==order['Symbol'],'Position'].index.tolist()
+            book.ix[idx,'Position'] = book.ix[idx,'Position'] + order['Shares']
+        elif order['Order'] == 'SELL':
+            idx = book.ix[book['Symbol']==order['Symbol'],'Position'].index.tolist()
+            book.ix[idx,'Position'] = book.ix[idx,'Position'] - order['Shares']
+    else:
+
+        price = get_data(['IBM'], pd.date_range(order['Date'],order['Date']),addSPY=False)
+        print('pricew')
+        price = price.iloc[0,0]
+        order = order.tolist()
+        newRow = [order[1],order[3],price,price*order[3]]
+        newRow = pd.DataFrame([newRow],columns=book.columns.values)
+        print(newRow)
+        book = pd.concat([book,newRow],ignore_index=True)
+
     return book
 
 
@@ -50,25 +67,18 @@ def compute_portvals(orders_file = "./orders/orders.csv", start_val = 1000000):
     print('Book')
     print(book)
 
-    orderTracker = 0
 
     for day in portVals.index.values:
-        for i in range(orderTracker,lastOrderRow):
-            if pd.Timestamp(day).to_pydatetime() == orders.ix[orderTracker,'Date'].to_datetime():
-                #print('day')
-                #print(day)
-                #print(orders.ix[orderTracker,'Date'])
-                print('oder today!')
-                print(orders.ix[orderTracker,'Symbol'])
-                #print('order symbol')
-                #print(orders.ix[orderTracker,'Symbol'])
-                #print('book symbol')
-                #print(book.ix[1,'Symbol'])
-                if orders.ix[orderTracker,'Symbol'] ==book['Symbol'].any(): #in book['Symbol']:
-                    print('already in book')
-                    print(orders.ix[orderTracker,'Symbol'])
+        for i in range(0,lastOrderRow):
+            if pd.Timestamp(day).to_pydatetime() == orders.ix[i,'Date'].to_datetime():
+                print(day)
+                order = orders.ix[i,:]
+                book = updatBook(book,order)
+        print('new book')
+        print(book)
 
-                orderTracker = orderTracker + 1
+
+
     '''
     # In the template, instead of computing the value of the portfolio, we just
     # read in the value of IBM over 6 months
