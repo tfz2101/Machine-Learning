@@ -8,30 +8,57 @@ import os
 from util import get_data, plot_data
 
 
-def calcBookMV(book):
+def calcBookMV(book,date):
+    for i in range(0,book.shape[0]):
+        price = get_data([book.ix[i,'Symbol']], pd.date_range(date,date),addSPY=False)
+        price = price.iloc[0,0]
+        if price/price == 1:
+            book.ix[i,'Price'] = price
+        book.ix[i,'Value'] = book.ix[i,'Price'] * book.ix[i,'Position']
 
-
-    #returns a single value
-    return 0
-
-def updatBook(book,order):
-
-    #returns updated book
     return book
 
 
+def updateBook(book,order,cash,thresh=3.0):
+    originalBook = book.iloc[:,:]
+    signDict = {'SELL':-1,'BUY':1}
+    if order['Symbol'] in book['Symbol'].tolist():
+        idx = book.ix[book['Symbol']==order['Symbol'],'Position'].index.tolist()
+        book.ix[idx,'Position'] = book.ix[idx,'Position'] + order['Shares']*signDict[order['Order']]
+
+    else:
+        order = order.tolist()
+        newRow = [order[1],order[3]*signDict[order[2]],0,0]
+        newRow = pd.DataFrame([newRow],columns=book.columns.values)
+        book = pd.concat([book,newRow],ignore_index=True)
+
+    price = get_data([order[1]], pd.date_range(order[0].to_datetime(),order[0].to_datetime()),addSPY=False)
+    price = price.iloc[0,0]
+    outCash = -1*signDict[order[2]] * order[3] * price +cash
+
+    if isOverLevered(book,outCash,thresh):
+        book = originalBook
+        outCash = cash
+    return book,outCash
+
+def isOverLevered(book,cash, thresh):
+    leverage = float(book['Value'].abs().sum()) / float(book['Value'].sum() + cash)
+    print('leverage')
+    print(leverage)
+    if leverage > 3.0:
+        return True
+    else:
+        return False
 
 def compute_portvals(orders_file = "./orders/orders.csv", start_val = 1000000):
     # this is the function the autograder will call to test your code
     #TODO: Your code here
     #FIXME: ??
 
-    orders = pd.read_csv(orders_file,sep=',')
+    cash = start_val
 
-    lastOrderRow = orders.shape[1]
-    for day in orders['Date']:
-        day = dt.datetime.strptime(day,'%Y-%m-%d')
-
+    orders = pd.read_csv(orders_file,sep=',',parse_dates = [0], infer_datetime_format=True)
+    lastOrderRow = orders.shape[0]
 
     startDate = orders.ix[0,'Date']
     endDate = orders.ix[lastOrderRow-1,'Date']
@@ -40,14 +67,33 @@ def compute_portvals(orders_file = "./orders/orders.csv", start_val = 1000000):
     portVals = pd.DataFrame(index=datesIndex,columns=['Date','Value'])
     lastPortRow = portVals.shape[0]
 
-    book = pd.DataFrame([['AAPL',1,120,120],['IBM',3,10,30]], columns=['Symbol','Position','Price','Value'])
-    print('Book')
-    print(book)
+    book = pd.DataFrame(columns=['Symbol','Position','Price','Value'])
+
+    for day in portVals.index.values:
+        print('Date')
+        print(day)
+        for i in range(0,lastOrderRow):
+            if pd.Timestamp(day).to_pydatetime() == orders.ix[i,'Date'].to_datetime():
+                order = orders.ix[i,:]
+                book = calcBookMV(book,day)
+                book,cash = updateBook(book,order,cash)
+
+        book = calcBookMV(book,day)
+        print('Current Book')
+        print(book)
+        portV = book['Value'].sum()
+        print(portV)
+
+        mv = portV + cash
+        print('Final MV')
+        print(mv)
+        portVals.ix[day,'Value']=mv
+    return portVals
 
 
-    for i in range(0,lastPortRow):
-        if day == orders.ix[i,'Date']:
-            print(day)
+
+
+
 
     '''
     # In the template, instead of computing the value of the portfolio, we just
@@ -67,7 +113,7 @@ def test_code():
     # note that during autograding his function will not be called.
     # Define input parameters
 
-    of = "./orders/orders2.csv"
+    of = "./orders/orders.csv"
     sv = 1000000
 
     # Process orders
