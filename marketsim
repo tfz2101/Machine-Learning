@@ -1,151 +1,310 @@
-"""MC2-P1: Market simulator."""
-
-import pandas as pd
 import numpy as np
-import datetime as dt
+import pandas as pd
+
+'''Recursion'''
+def countDown(n):
+    if n<= 0:
+        print('whoa\n')
+    else:
+        print(n)
+        countDown(n-1)
+
+countDown(10)
+
+'''USER PROMPT'''
+#User prompt
+#name = raw_input("What is your name?\n")
+#print(name)
+
+
+
+'''STRINGS'''
+#Characters in Strings
+fruit = 'banana'
+letter = fruit[2]
+for char in fruit:
+    print(char)
+
+findLetter =  fruit.find('na')
+#print(findLetter)
+
+if 'na' in fruit:
+    print('you found a letter')
+
+
+
+#String into a list
+s = 'spam'
+t = list(s)
+#print(t)
+
+#The same word is stored in the same String object
+a = 'word'
+b = 'word'
+if a is b:
+    print('a and b points to the same object')
+
+
+'''LISTS'''
+#Combining lists
+a = [1,2,3]
+b = [4,5,6]
+a.extend(b)
+#print(a)
+
+#Removing lists
+t = ['a','b','c']
+x = t.pop(0)
+#print(x)
+
+del t[0]
+#print(t)
+
+t.remove('c')
+#print(t)
+
+#Sort
+b = np.array([[1,2,3], [4,5,6], [7,8,9]])
+b = b.tolist()
+b = sorted(b,key= lambda x: x[1],reverse=True)
+print(b)
+
+#Can only use the IN operator on a list, not a Series
+x=['aapl','ibm','dell']
+x = pd.DataFrame(x,columns=['a'])
+print(x)
+if 'dell' in x['a'].tolist():
+    print('your right')
+
+
+#List Comps
+name = ['frank','dave']
+age = [12,33]
+y = [(x,y) for x in name for y in age]
+print(y)
+
+#Assigning to slices
+l = [1,2,3,4,5,6]
+l[0:4]=[1] #object assigned to slice must be iterable
+print('slice assignment')
+print(l)
+
+
+
+
+'''DATETIME Class/TIME Class'''
+#convert string to time object
+date = '2001-12-01'
+import datetime as datetime
+date = datetime.datetime.strptime(date,'%Y-%m-%d')
+#print(date)
+
+#Access Year/Month/Day in Time object
+'''
 import time as time
-import os
-from util import get_data, plot_data
+date = '2001-12-01'
+timeaccess = time.struct_time(date)
+year = timeaccess.tm_year
+month = timeaccess.tm_mon
+'''
 
-
-def calcBookMV(book,date):
-    for i in range(0,book.shape[0]):
-        price = get_data([book.ix[i,'Symbol']], pd.date_range(date,date),addSPY=False)
-        price = price.iloc[0,0]
-        if price/price == 1:
-            book.ix[i,'Price'] = price
-        book.ix[i,'Value'] = book.ix[i,'Price'] * book.ix[i,'Position']
-
-    return book
-
-
-def updateBook(book,order,cash,thresh=3.0):
-    originalBook = book.iloc[:,:]
-    signDict = {'SELL':-1,'BUY':1}
-    if order['Symbol'] in book['Symbol'].tolist():
-        idx = book.ix[book['Symbol']==order['Symbol'],'Position'].index.tolist()
-        book.ix[idx,'Position'] = book.ix[idx,'Position'] + order['Shares']*signDict[order['Order']]
-
-    else:
-        order = order.tolist()
-        newRow = [order[1],order[3]*signDict[order[2]],0,0]
-        newRow = pd.DataFrame([newRow],columns=book.columns.values)
-        book = pd.concat([book,newRow],ignore_index=True)
-
-    price = get_data([order[1]], pd.date_range(order[0].to_datetime(),order[0].to_datetime()),addSPY=False)
-    price = price.iloc[0,0]
-    outCash = -1*signDict[order[2]] * order[3] * price +cash
-
-    if isOverLevered(book,outCash,thresh):
-        book = originalBook
-        outCash = cash
-    return book,outCash
-
-def isOverLevered(book,cash, thresh):
-    leverage = float(book['Value'].abs().sum()) / float(book['Value'].sum() + cash)
-    print('leverage')
-    print(leverage)
-    if leverage > 3.0:
-        return True
-    else:
-        return False
-
-def compute_portvals(orders_file = "./orders/orders.csv", start_val = 1000000):
-    # this is the function the autograder will call to test your code
-    #TODO: Your code here
-    #FIXME: ??
-
-    cash = start_val
-
-    orders = pd.read_csv(orders_file,sep=',',parse_dates = [0], infer_datetime_format=True)
-    lastOrderRow = orders.shape[0]
-
-    startDate = orders.ix[0,'Date']
-    endDate = orders.ix[lastOrderRow-1,'Date']
-    datesIndex = pd.date_range(startDate,endDate,freq='1D').tolist()
-
-    portVals = pd.DataFrame(index=datesIndex,columns=['Date','Value'])
-    lastPortRow = portVals.shape[0]
-
-    book = pd.DataFrame(columns=['Symbol','Position','Price','Value'])
-
-    for day in portVals.index.values:
-        print('Date')
-        print(day)
-        for i in range(0,lastOrderRow):
-            if pd.Timestamp(day).to_pydatetime() == orders.ix[i,'Date'].to_datetime():
-                order = orders.ix[i,:]
-                book = calcBookMV(book,day)
-                book,cash = updateBook(book,order,cash)
-
-        book = calcBookMV(book,day)
-        print('Current Book')
-        print(book)
-        portV = book['Value'].sum()
-        print(portV)
-
-        mv = portV + cash
-        print('Final MV')
-        print(mv)
-        portVals.ix[day,'Value']=mv
-    return portVals
+#Create iterable dateTime object
+start = datetime.datetime(2016,12,1)
+end = datetime.datetime(2016,12,30)
+date_ranges = pd.date_range(start,end)
+#print('DATE RANGES')
+#print(date_ranges)
 
 
 
 
+'''PANDAS'''
+#List into DataFrame
+a = [1,3,4,5]
+p = pd.DataFrame([a])
+#print(p)
 
 
-    '''
-    # In the template, instead of computing the value of the portfolio, we just
-    # read in the value of IBM over 6 months
-    start_date = dt.datetime(2008,1,1)
-    end_date = dt.datetime(2008,6,1)
-    #print('Portvals call')
-    portvals = get_data(['IBM'], pd.date_range(start_date, end_date))
-    #print(portvals)
-    #portvals = portvals[['IBM']]  # remove SPY
-    '''
+#Find the index of value via boolean mask
+df = pd.DataFrame([1,2,1],columns=['A'])
+idx = df.ix[df['A']==1,'A']
+print('index')
+print(idx)
 
-    return portVals
 
-def test_code():
-    # this is a helper function you can use to test your code
-    # note that during autograding his function will not be called.
-    # Define input parameters
+#GroupBy
+data = pd.DataFrame({'nums':[1,3,5,2,6],'num2':[2,4,2,5,7],'type':['odd','odd','odd','even','even'],'level':[1,2,2,3,1]})
+grouped =  data['nums'].groupby([data['type'],data['level']])
+#if data and map in same dataframe
+grouped = data.groupby(['type','level'])
+#print(grouped.mean())
+#print(grouped.size())
 
-    of = "./orders/orders.csv"
-    sv = 1000000
 
-    # Process orders
-    portvals = compute_portvals(orders_file = of, start_val = sv)
-    if isinstance(portvals, pd.DataFrame):
-        portvals = portvals[portvals.columns[0]] # just get the first column
-    else:
-        "warning, code did not return a DataFrame"
-    
-    # Get portfolio stats
-    # Here we just fake the data. you should use your code from previous assignments.
-    start_date = dt.datetime(2008,1,1)
-    end_date = dt.datetime(2008,6,1)
-    cum_ret, avg_daily_ret, std_daily_ret, sharpe_ratio = [0.2,0.01,0.02,1.5]
-    cum_ret_SPY, avg_daily_ret_SPY, std_daily_ret_SPY, sharpe_ratio_SPY = [0.2,0.01,0.02,1.5]
+for type, level in data.groupby('type'):
+    #print(type)
+    #print(level)
+    pass
 
-    # Compare portfolio against $SPX
-    print "Date Range: {} to {}".format(start_date, end_date)
-    print
-    print "Sharpe Ratio of Fund: {}".format(sharpe_ratio)
-    print "Sharpe Ratio of SPY : {}".format(sharpe_ratio_SPY)
-    print
-    print "Cumulative Return of Fund: {}".format(cum_ret)
-    print "Cumulative Return of SPY : {}".format(cum_ret_SPY)
-    print
-    print "Standard Deviation of Fund: {}".format(std_daily_ret)
-    print "Standard Deviation of SPY : {}".format(std_daily_ret_SPY)
-    print
-    print "Average Daily Return of Fund: {}".format(avg_daily_ret)
-    print "Average Daily Return of SPY : {}".format(avg_daily_ret_SPY)
-    print
-    print "Final Portfolio Value: {}".format(portvals[-1])
+#Groupby into Dictionaries
+pieces = dict(list(data.groupby('type')))
+print(pieces['odd'])
+print('marker')
+x = list(data.groupby('type'))[0]
+print(x)
 
-if __name__ == "__main__":
-    test_code()
+#Groupby using functions
+def rounder(x):
+    import math as math
+    return math.ceil(x)
+grouped = data['nums'].groupby(rounder)
+print('functions')
+print(grouped.mean())
+
+#Using keyword IN for a Panda DataFrame - must convert to list first!
+df = pd.DataFrame([1,2,3],columns=['a'])
+if 2 in df['a'].tolist():
+    print('ITS IN THERE!')
+    pass
+
+
+'''DICTIONARIES'''
+dict = {'a':1,'b':2,'c':10,'d':20}
+
+#Value/Keys in dictionary
+print(dict.values())
+print(dict.keys())
+print(1 in dict.keys())
+
+#List into Dictionaries
+lst =[('a',[1,2]),('b',[3,4])]
+#dct = dict(lst)
+
+'''TUPLE'''
+#Single tuple
+a = '1',
+#print(type(a))
+
+#String Tuple
+a =  tuple('word')
+#print(a)
+
+#Zip method
+a = tuple('abcdefghi')
+b = [0,2,3]
+#print(zip(a,b))
+
+#Compare tuples
+a=(1,2,3)
+b = (4,5,6)
+#print(a < b)
+
+
+#Tuple unpacking/paralell assignment
+coord = (19,20)
+x,y = coord
+print('TUPLE UNPACKING')
+print(x)
+print(y)
+
+
+#Slicing: tuple{start:stop:step]
+s = 'randomness'
+print('tuple slicing')
+print(s[::2])
+
+
+
+'''CLASS'''
+#Default methods
+class MyClass(object):
+
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        #String representation of the object, used by the print() method
+        pass
+
+    def __str__(self, param):
+        #Overloaded version of the Str() method
+        pass
+
+    def __lt__(self, other):
+        #Same as < boolean operator (Less Than)
+        pass
+
+    def __ge__(self, other):
+        #Same as >= operator (Greater Than or Equals)
+        pass
+
+    def __add__(self, other):
+        pass
+
+    def __cmp__(self, other):
+        pass
+
+#Object is the Superclass for every class
+print('Base Class')
+print(MyClass.__class__.__base__)
+
+
+
+'''NUMPY'''
+#initialization
+a  = np.array(([1,3,4],[5,22,4],[11,232,2]))
+b = np.empty([10,2])
+b = np.zeros([10,2])
+#print(b)
+
+#Shape
+#print(a.shape[0])
+
+#Convert into array, nothin if already array
+c = np.asanyarray(a)
+#print(type(c))
+
+#Convert datatypes in arrays
+d = b.astype(np.float64)
+#print(d.dtype)
+
+#Boolean Mask
+t = np.array([1,3,4,4,1,1,1])
+#print(a[a<3])
+
+#Transpose
+print(a.T)
+
+#Unique
+print(np.unique(a))
+
+#Combining by rows or columns
+a1 = np.array([1,2,3,])
+a2 = np.array([4,5,6])
+a3 = np.r_[a1,a2]
+a4 = np.c_[a1,a2]
+zipped = zip(a1,a2)
+
+#Broadcasting
+#Normalizing data
+arr = np.array([[1,2,3],[4,5,6]])
+mean =  arr.mean(axis=1)
+mean = mean.reshape((2,1))
+scaled = arr - mean
+print(scaled)
+
+
+#Apply Along Axis
+def my_func(a):
+
+    return a[0]
+
+b = np.array([[1,2,3], [4,5,6], [7,8,9]])
+print(np.apply_along_axis(my_func,1,b))
+
+
+
+'''MISC FUNCTIONS'''
+x = [1,2,4]
+print('memory address')
+print(id(x))
