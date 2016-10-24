@@ -304,6 +304,50 @@ print(np.apply_along_axis(my_func,1,b))
 
 
 
+
+'''CONCURRENCY/THREADING'''
+#Running processes on multiple threads
+import time
+import threading
+def countdown(count):
+   arr1 = np.zeros((10000,10000))
+   return arr1 * arr1
+
+start = time.time()
+a = countdown(10)
+b = countdown(10)
+end = time.time()
+print(end-start)
+
+
+start = time.time()
+t1 = threading.Thread(target=countdown,args=(10,))
+t1.start()
+t2 = threading.Thread(target=countdown,args=(10,))
+t2.start()
+end = time.time()
+print(end - start)
+
+#Have a thread wait for other threads to finish
+t1.join()
+
+#if a thread runs continuously in the background make it Daemonic. Otherwise the interpretor wait for the thread to finish
+t1.setDaemon(True)
+
+#Can extend the existing threading.thread class and overload the run() function to customize it
+class CountdownThread(threading.Thread):
+     def __init__(self,count):
+        threading.Thread.__init__(self)
+        self.count = count
+     def run(self):
+        while self.count > 0:
+            print "Counting down", self.count
+            self.count -= 1
+            time.sleep(5)
+        return
+
+
+
 '''MISC FUNCTIONS'''
 x = [1,2,4]
 print('memory address')
