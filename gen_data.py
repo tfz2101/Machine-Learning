@@ -30,16 +30,27 @@ def getCode(row,coeffChoice, coeffThresh):
     return out
 
 def best4RT():
-    Y = []
-    X = np.random.choice(range(0,2000),size = (500,4),replace=True)
+    X = np.array([[10,0],[10,0],[10,0],[10,100],[10,100],[100,100],[100,100],[100,100],[0,0],[0,0]])
+    Y = np.array([1000,1000,1000,-1000,-1000,5000,5000,5000,10000,10000])
+    '''
+    X = np.random.choice(range(0,2000),size = (500,1),replace=True)
+    means = np.mean(X,axis=0)
     #coefChoice = [[0.5,2],[4,6],[6,8],[8,10]]
     #coefThresh = [1000,1000,1000,1000]
+
     for i in range(0,X.shape[0]):
         x = np.array(X[i])
         #y = getCode(x,coefChoice,coefThresh)
-        y = sum([i**2 for i in x])
+        if x[0] % 2 !=0 and x[1] % 2 !=0:
+            y = 1000
+        if x[0] % 2 ==0 and x[2] % 2 !=0:
+            y = -200
+        else:
+            y = 0
+
         Y.append(y)
     Y = np.array(Y)
+    '''
 
     return X, Y
 
