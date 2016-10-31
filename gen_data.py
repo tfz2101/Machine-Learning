@@ -16,25 +16,28 @@ def best4LinReg():
     print(Y)
     return X, Y
 
-def getCoeff(row,coeffChoice, coeffThresh):
-    coeff = []
-    for i in range(0,len(coeffChoice)):
-        if row[i] < coeffThresh[i]:
-            coeff.append(coeffChoice[i][0])
+def getCode(row,coeffChoice, coeffThresh):
+    map = {'0000':1,'1000':2,'0100':3,'1100':4,'1110':5,'0010':6,'1010':7,'0110':8,'0001':9,'1001':10,'0101':11,'1101':12,'1111':13,'0011':14,'1011':15,'0111':16}
+    code = ""
+    for i in range(0,4):
+        if row[i]>=1000:
+            code =code + '1'
         else:
-            coeff.append(coeffChoice[i][1])
-    return coeff
+            code =code + '0'
+    print('code')
+    print(code)
+    out = map[code]
+    return out
 
 def best4RT():
     Y = []
     X = np.random.choice(range(0,2000),size = (500,4),replace=True)
-    coefChoice = [[0.5,2],[4,6],[6,8],[8,10]]
-    coefThresh = [1000,1000,1000,1000]
+    #coefChoice = [[0.5,2],[4,6],[6,8],[8,10]]
+    #coefThresh = [1000,1000,1000,1000]
     for i in range(0,X.shape[0]):
         x = np.array(X[i])
-        coeffs = np.array(getCoeff(X[i],coefChoice,coefThresh))
-        y = x * coeffs
-        y = y.sum()
+        #y = getCode(x,coefChoice,coefThresh)
+        y = sum([i**2 for i in x])
         Y.append(y)
     Y = np.array(Y)
 
