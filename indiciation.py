@@ -23,17 +23,6 @@ def getMACDValues(data,slowFreq, fastFreq, stdFreq):
     MACD = diff/diff_std
     print(MACD)
 
-def getMACDValues(data,slowFreq, fastFreq, stdFreq):
-    slow_MA = pd.rolling_mean(data,slowFreq)
-    fast_MA = pd.rolling_mean(data,fastFreq)
-    diff = fast_MA - slow_MA
-    diff_std = pd.rolling_std(arg=diff,window=stdFreq)
-
-    print(diff_std)
-    MACD = diff/diff_std
-    print(MACD)
-
-
 
 getMACDValues(IBM_Data,5,2,3)
 
