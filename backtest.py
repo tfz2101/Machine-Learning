@@ -6,6 +6,8 @@ import datetime as dt
 import time as time
 import os
 from util import get_data, plot_data
+import rule_based
+import indicators
 
 
 def calcBookMV(book,date):
@@ -138,4 +140,11 @@ def simulate_Orders(of = "./orders/orders.csv",sv = 1000000):
     print "Final Portfolio Value: {}".format(portvals[-1])
 
 
-simulate_Orders()
+#simulate_Orders()
+start_date = dt.datetime(2008,1,1)
+end_date = dt.datetime(2012,1,1)
+datesIndex = pd.date_range(start_date,end_date,freq='1D').tolist()
+symbols = ['IBM']
+IBM_Data = get_data(symbols,datesIndex,addSPY=False)
+IBM_Data= IBM_Data.dropna()
+indicator = indicators.getMACDValues(IBM_Data,5,2,3)
