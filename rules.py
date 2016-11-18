@@ -1,3 +1,5 @@
+
+
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -11,10 +13,18 @@ def getOrders(indicators, rule,*args,**kwargs):
 
 
 def ruleSTD(indicators,sigmas):
-    orders = pd.DataFrame(index = indicators.index.values)
-    for date in indicators.index.values:
-        if indicators.ix[date,0] > 1:
+    orders = pd.DataFrame(columns = ['Date','Symbol','Order','Shares'])
+    for i in orders.shape[0]:
+        if indicators.ix[date,0] >= 1:
+           orders.ix[i,'Symbol'] = 'IBM'
+           orders.ix[i,'Date'] = indicators.index.values[i]
+           orders.ix[i,'Shares'] =- 1
+        if indicators.ix[date,0] <= -1:
+           orders.ix[i,'Symbol'] = 'IBM'
+           orders.ix[i,'Date'] = indicators.index.values[i]
+           orders.ix[i,'Shares'] =+ 1
 
 test =  pd.DataFrame([[1,2,3]])
 test2 = [1,2,3]
-getOrders(test2)
+
+#getOrders(test2)
