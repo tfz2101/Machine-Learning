@@ -7,23 +7,22 @@ import time as time
 import os
 from util import get_data, plot_data
 
-def getOrders(indicators, rule,*args,**kwargs):
+def getOrders(indicators, rule,**kwargs):
     assert isinstance(indicators,pd.DataFrame), "Indicators have to be a dataframe with dates as index"
-
+    return rule(indicators,**kwargs)
 
 
 def ruleSTD(indicators,sigmas):
-    orders = pd.DataFrame(columns = ['Date','Symbol','Order','Shares'])
-    for i in orders.shape[0]:
-        if indicators.ix[date,0] >= 1:
-           orders.ix[i,'Symbol'] = 'IBM'
-           orders.ix[i,'Date'] = indicators.index.values[i]
-           orders.ix[i,'Shares'] =- 1
-        if indicators.ix[date,0] <= -1:
-           orders.ix[i,'Symbol'] = 'IBM'
-           orders.ix[i,'Date'] = indicators.index.values[i]
-           orders.ix[i,'Shares'] =+ 1
-
+    print(indicators)
+    orders = []
+    for i in range(0,indicators.shape[0]):
+        if indicators.iloc[i,0] >= sigmas:
+           orders.append([indicators.index.values[i],'IBM','SELL',1])
+        if indicators.iloc[i,0] <= -sigmas:
+           orders.append([indicators.index.values[i],'IBM','BUY',1])
+    print('orders list version',orders)
+    orders = pd.DataFrame(orders,columns = ['Date','Symbol','Order','Shares'])
+    return orders
 test =  pd.DataFrame([[1,2,3]])
 test2 = [1,2,3]
 
