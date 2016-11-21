@@ -52,14 +52,14 @@ def isOverLevered(book,cash, thresh):
     else:
         return False
 
-def compute_portvals(orders_file = "./orders/orders.csv", start_val = 1000000):
+def compute_portvals(orders, start_val = 1000000):
     # this is the function the autograder will call to test your code
     #TODO: Your code here
     #FIXME: ??
 
     cash = start_val
 
-    orders = pd.read_csv(orders_file,sep=',',parse_dates = [0], infer_datetime_format=True)
+    #orders = pd.read_csv(orders_file,sep=',',parse_dates = [0], infer_datetime_format=True)
     lastOrderRow = orders.shape[0]
 
     startDate = orders.ix[0,'Date']
@@ -105,11 +105,11 @@ def compute_portvals(orders_file = "./orders/orders.csv", start_val = 1000000):
 
     return portVals
 
-def simulate_Orders(of = "./orders/orders.csv",sv = 1000000):
+def simulate_Orders(orders,sv = 1000000):
 
 
     # Process orders
-    portvals = compute_portvals(orders_file = of, start_val = sv)
+    portvals = compute_portvals(orders = orders, start_val = sv)
     if isinstance(portvals, pd.DataFrame):
         portvals = portvals[portvals.columns[0]] # just get the first column
     else:
@@ -148,3 +148,7 @@ symbols = ['IBM']
 IBM_Data = get_data(symbols,datesIndex,addSPY=False)
 IBM_Data= IBM_Data.dropna()
 indicator = indicators.getMACDValues(IBM_Data,5,2,3)
+orders = rule_based.getOrders(indicator,rule_based.ruleSTD,**{'sigmas':2})
+print(orders)
+port_vals=compute_portvals(orders)
+print(port_vals)
