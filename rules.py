@@ -20,10 +20,10 @@ def ruleSTD(indicators,sigmas):
            orders.append([indicators.index.values[i],'IBM','SELL',1])
         if indicators.iloc[i,0] <= -sigmas:
            orders.append([indicators.index.values[i],'IBM','BUY',1])
-    print('orders list version',orders)
     orders = pd.DataFrame(orders,columns = ['Date','Symbol','Order','Shares'])
     return orders
 test =  pd.DataFrame([[1,2,3]])
 test2 = [1,2,3]
+
 
 #getOrders(test2)
