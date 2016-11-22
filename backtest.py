@@ -8,7 +8,9 @@ import os
 from util import get_data, plot_data
 import rule_based
 import indicators
-
+import analysis
+import cProfile
+import re
 
 def calcBookMV(book,date):
     for i in range(0,book.shape[0]):
@@ -116,10 +118,9 @@ def simulate_Orders(orders,sv = 1000000):
         "warning, code did not return a DataFrame"
     
     # Get portfolio stats
-    # Here we just fake the data. you should use your code from previous assignments.
-    start_date = dt.datetime(2008,1,1)
-    end_date = dt.datetime(2008,6,1)
-    cum_ret, avg_daily_ret, std_daily_ret, sharpe_ratio = [0.2,0.01,0.02,1.5]
+    start_date = orders.ix[0,'Date']
+    end_date = orders.ix[orders.shape[0]-1,'Date']
+    cum_ret, avg_daily_ret, std_daily_ret, sharpe_ratio,end_value = analysis.assess_portfolio(sd=start_date,ed=end_date,syms=['IBM'],allocs=[1])
     cum_ret_SPY, avg_daily_ret_SPY, std_daily_ret_SPY, sharpe_ratio_SPY = [0.2,0.01,0.02,1.5]
 
     # Compare portfolio against $SPX
@@ -139,16 +140,51 @@ def simulate_Orders(orders,sv = 1000000):
     print
     print "Final Portfolio Value: {}".format(portvals[-1])
 
+def mapYFromReturn(prices, lookFwd, sellTresh=0, buyThresh=0):
+    Y = prices.copy()
+    Y.iloc[:,0]=np.nan
+    labels =  Y.copy()
+    print(prices)
+    for i in range(0,prices.shape[0]-lookFwd):
+        Y.iloc[i,0] = float(prices.iloc[i+lookFwd,0] - prices.iloc[i,0])/prices.iloc[i,0]
+        if Y.iloc[i,0] >= buyThresh: labels.iloc[i,0] = 1
+        elif Y.iloc[i,0] <=sellTresh: labels.iloc[i,0] = -1
+        else: labels.iloc[i,0] = 0
+    print(Y)
+    print(labels)
+    return labels
 
-#simulate_Orders()
+
+#CMD
 start_date = dt.datetime(2008,1,1)
 end_date = dt.datetime(2012,1,1)
 datesIndex = pd.date_range(start_date,end_date,freq='1D').tolist()
 symbols = ['IBM']
 IBM_Data = get_data(symbols,datesIndex,addSPY=False)
 IBM_Data= IBM_Data.dropna()
-indicator = indicators.getMACDValues(IBM_Data,5,2,3)
+start = time.time()
+MACD = indicators.getMACDValues(IBM_Data,20,5,10)
+RSI = indicators.getRSIValues(IBM_Data,20)
+indicator = pd.concat([MACD,RSI], axis = 1, join='inner')
+print('full indicator data',indicator)
+
+#end1 = time.time()
+#print('Indicator time',end1-start)
+
 orders = rule_based.getOrders(indicator,rule_based.ruleSTD,**{'sigmas':2})
-print(orders)
-port_vals=compute_portvals(orders)
-print(port_vals)
+
+#end1 = time.time()
+#print('Indicator time',end1-start)
+#print(orders)
+
+#simulate_Orders(orders)
+
+#end1 = time.time()
+#print('Indicator time',end1-start)
+
+#cProfile.run('re.compile("simulate_Orders|orders")')
+
+Y = mapYFromReturn(IBM_Data,5)
+print('Y',Y)
+
+full_data = pd.concat([Y,indicator],axis = 1, join='inner')
