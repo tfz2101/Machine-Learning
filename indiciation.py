@@ -44,7 +44,20 @@ def getRSIValues(data,freq):
     #print(out)
     return out
 
+def getBollingerValues(data, freq):
+    MA = pd.rolling_mean(data,freq)
+    std = pd.rolling_std(arg=data,window=freq)
+    dev = data - MA
+    dev_std = dev / std
+    '''
+    upper = pd.DataFrame(index=data.index.values,columns=['Upper_Band'])
+    upper['Upper_Band']=MA[:]+std[:]
+    lower = pd.DataFrame(index=data.index.values,columns=['Lower_Band'])
+    lower = upper['Upper_Band']=MA[:]-std[:]
+    '''
+    return dev_std
+
 
 
 #getMACDValues(IBM_Data,10,3,5)
-getRSIValues(IBM_Data,10)
+getBollingerValues(IBM_Data,10)
