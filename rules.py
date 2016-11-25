@@ -1,5 +1,3 @@
-
-
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -12,16 +10,37 @@ def getOrders(indicators, rule,**kwargs):
     return rule(indicators,**kwargs)
 
 
-def ruleSTD(indicators,sigmas):
-    print(indicators)
-    orders = []
-    for i in range(0,indicators.shape[0]):
-        if indicators.iloc[i,0] >= sigmas:
-           orders.append([indicators.index.values[i],'IBM','SELL',1])
-        if indicators.iloc[i,0] <= -sigmas:
-           orders.append([indicators.index.values[i],'IBM','BUY',1])
-    orders = pd.DataFrame(orders,columns = ['Date','Symbol','Order','Shares'])
-    return orders
+class tradingRules(object):
+
+    def __init__(self,holdingPer = 10,maxHoldings=500):
+        self.position = 0
+        self.lastEntryDate = 0
+        self.holdingPer = holdingPer
+        self.maxHoldings =  maxHoldings
+        self.unit = 500
+
+
+    def ruleSTD(self,indicators,sigmas):
+        orders = []
+        self.position = 0
+        self.lastEntryDate = dt.datetime(1800,1,1)
+        for i in range(0,indicators.shape[0]):
+            tempPos = self.position
+            if indicators.iloc[i,0] >= sigmas:
+               temp = [indicators.index.values[i],'IBM','SELL',self.unit]
+               tempPos =- self.unit
+            if indicators.iloc[i,0] <= -sigmas:
+               temp = [indicators.index.values[i],'IBM','BUY',self.unit]
+               tempPos =+ self.unit
+            tempDate = dt.datetime.utcfromtimestamp(indicators.index.values[0].tolist()/1e9)
+            daysBtwOrders  = tempDate - self.lastEntryDate
+            if (daysBtwOrders.days > self.holdingPer) and (abs(tempPos) <= self.maxHoldings) and tempPos != self.position:
+                orders.append(temp)
+                self.position = tempPos
+        orders = pd.DataFrame(orders,columns = ['Date','Symbol','Order','Shares'])
+        return orders
+
+
 test =  pd.DataFrame([[1,2,3]])
 test2 = [1,2,3]
 
