@@ -11,6 +11,7 @@ import indicators
 import analysis
 import cProfile
 import re
+import RTLearner
 
 def calcBookMV(book,date):
     for i in range(0,book.shape[0]):
@@ -54,14 +55,13 @@ def isOverLevered(book,cash, thresh):
     else:
         return False
 
-def compute_portvals(orders, start_val = 1000000):
+def compute_portvals(orders, start_val = 1000000,levThresh = 3.0):
     # this is the function the autograder will call to test your code
     #TODO: Your code here
     #FIXME: ??
 
     cash = start_val
 
-    #orders = pd.read_csv(orders_file,sep=',',parse_dates = [0], infer_datetime_format=True)
     lastOrderRow = orders.shape[0]
 
     startDate = orders.ix[0,'Date']
@@ -79,8 +79,6 @@ def compute_portvals(orders, start_val = 1000000):
     book = pd.DataFrame(columns=['Symbol','Position','Price','Value'])
 
     for day in portVals.index.values:
-        #print('Date')
-        #print(day)
         originalBook = book.iloc[:,:]
         originalCash = cash
         for i in range(0,lastOrderRow):
@@ -90,38 +88,44 @@ def compute_portvals(orders, start_val = 1000000):
                 book,cash = updateBook(book,order,cash)
 
         book = calcBookMV(book,day)
-        #print('Current Book')
-        #print(book)
-        if isOverLevered(book,cash,3.0):
+        if isOverLevered(book,cash,levThresh):
             book = originalBook
             cash = originalCash
 
         portV = book['Value'].sum()
-        #print(portV)
 
         mv = portV + cash
-        #print('Final MV')
-        #print(mv)
         portVals.ix[day,'Value']=mv
-
 
     return portVals
 
-def simulate_Orders(orders,sv = 1000000):
+def simulate_Orders(orders,sv = 100000):
 
 
     # Process orders
-    portvals = compute_portvals(orders = orders, start_val = sv)
+    portvals = compute_portvals(orders = orders, start_val = sv, levThresh=1000000000.0)
     if isinstance(portvals, pd.DataFrame):
         portvals = portvals[portvals.columns[0]] # just get the first column
     else:
         "warning, code did not return a DataFrame"
-    
+
+    print('Beginning Portfolio Value: ',sv)
+    ev = portvals.iloc[portvals.shape[0]-1]
+    print('Final Portfolio Value: ',ev)
+    print('Portfolio Return: ',float(ev)/sv - 1)
+
+
+
     # Get portfolio stats
     start_date = orders.ix[0,'Date']
     end_date = orders.ix[orders.shape[0]-1,'Date']
-    cum_ret, avg_daily_ret, std_daily_ret, sharpe_ratio,end_value = analysis.assess_portfolio(sd=start_date,ed=end_date,syms=['IBM'],allocs=[1])
-    cum_ret_SPY, avg_daily_ret_SPY, std_daily_ret_SPY, sharpe_ratio_SPY = [0.2,0.01,0.02,1.5]
+    cum_ret, avg_daily_ret, std_daily_ret, sharpe_ratio,end_value = analysis.assess_portfolio(sd=start_date,ed=end_date,syms=['IBM'],allocs=[1],sv=sv)
+    print('Portfolio Return, Buy and Hold: ',cum_ret)
+
+
+
+    '''
+    cum_ret_SPY, avg_daily_ret_SPY, std_daily_ret_SPY, sharpe_ratio_SPY = analysis.assess_portfolio(sd=start_date,ed=end_date,syms=['SPY'],allocs=[1])
 
     # Compare portfolio against $SPX
     print "Date Range: {} to {}".format(start_date, end_date)
@@ -139,6 +143,7 @@ def simulate_Orders(orders,sv = 1000000):
     print "Average Daily Return of SPY : {}".format(avg_daily_ret_SPY)
     print
     print "Final Portfolio Value: {}".format(portvals[-1])
+    '''
 
 def mapYFromReturn(prices, lookFwd, sellTresh=0, buyThresh=0):
     Y = prices.copy()
@@ -155,36 +160,76 @@ def mapYFromReturn(prices, lookFwd, sellTresh=0, buyThresh=0):
     return labels
 
 
-#CMD
-start_date = dt.datetime(2008,1,1)
-end_date = dt.datetime(2012,1,1)
+#IN SAMPLE
+start_date = dt.datetime(2002,2,1)
+end_date = dt.datetime(2003,2,1)
 datesIndex = pd.date_range(start_date,end_date,freq='1D').tolist()
 symbols = ['IBM']
 IBM_Data = get_data(symbols,datesIndex,addSPY=False)
 IBM_Data= IBM_Data.dropna()
-start = time.time()
+
+#start = time.time()
+
+MACD = indicators.getMACDValues(IBM_Data,20,5,10)
+RSI = indicators.getRSIValues(IBM_Data,20)
+Boll = indicators.getBollingerValues(IBM_Data,20)
+indicator = pd.concat([MACD,RSI,Boll], axis = 1, join='inner')
+print('full indicator data',indicator.head(50))
+
+
+#GET ORDERS
+rulesOb = rule_based.tradingRules(holdingPer=10,maxHoldings=500)
+orders = rule_based.getOrders(indicator,rulesOb.ruleSTD,**{'sigmas':2})
+print(orders)
+
+#GET RETURNS FROM ORDERS
+print('commence getting orders')
+simulate_Orders(orders)
+#cProfile.run('re.compile("simulate_Orders|orders")')
+
+
+
+#OUT OF SAMPLE
+'''
+start_date1 = dt.datetime(2005,2,2)
+end_date1 = dt.datetime(2007,12,30)
+datesIndex1 = pd.date_range(start_date1,end_date1,freq='1D').tolist()
+IBM_Data_OS = get_data(symbols,datesIndex1,addSPY=False).dropna()
+orders_OS = rule_based.getOrders(indicator,rule_based.ruleSTD,**{'sigmas':2})
+
 MACD = indicators.getMACDValues(IBM_Data,20,5,10)
 RSI = indicators.getRSIValues(IBM_Data,20)
 indicator = pd.concat([MACD,RSI], axis = 1, join='inner')
-print('full indicator data',indicator)
-
-#end1 = time.time()
-#print('Indicator time',end1-start)
 
 orders = rule_based.getOrders(indicator,rule_based.ruleSTD,**{'sigmas':2})
 
-#end1 = time.time()
-#print('Indicator time',end1-start)
-#print(orders)
+simulate_Orders(orders)
+'''
 
-#simulate_Orders(orders)
 
-#end1 = time.time()
-#print('Indicator time',end1-start)
 
-#cProfile.run('re.compile("simulate_Orders|orders")')
-
+#APPLY RTLEARNER
+'''
 Y = mapYFromReturn(IBM_Data,5)
 print('Y',Y)
 
 full_data = pd.concat([Y,indicator],axis = 1, join='inner')
+full_data = full_data.dropna(axis=0)
+print('full_data',full_data)
+
+
+r_Y = np.array(full_data.iloc[:,0].values)
+r_Y = r_Y.reshape((full_data.shape[0],1))
+print(r_Y)
+
+r_X = full_data.iloc[:,range(1,full_data.shape[1])]
+r_X = np.array(r_X.values)
+print('r_X',r_X)
+
+rt =  RTLearner.RTLearner(leaf_size=5)
+rt.addEvidence(r_X,r_Y)
+preds = rt.query(r_X[0:10,:])
+print('preds',preds)
+'''
+
+
