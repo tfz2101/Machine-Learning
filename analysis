@@ -29,11 +29,9 @@ def assess_portfolio(sd = dt.datetime(2008,1,1), ed = dt.datetime(2009,1,1), \
     sv_port = float(sv)/np.dot(prices.iloc[0,:].values,np.array(allocs).transpose())
     prices = normalize_data(prices)
     prices_SPY =  normalize_data(prices_SPY)
-    #print('prices')
-    #print(prices)
+
     mv = prices.copy()
     for i in range(0,prices.shape[0]):
-        #mv.iloc[i,:] = [x*sv_port for x in allocs]
         mv.iloc[i,:] = [x for x in allocs]
     mv = pd.DataFrame(mv.values.transpose(),index = mv.columns.values, columns=mv.index.values)
 
