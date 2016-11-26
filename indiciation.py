@@ -60,4 +60,4 @@ def getBollingerValues(data, freq):
 
 
 #getMACDValues(IBM_Data,10,3,5)
-getBollingerValues(IBM_Data,10)
+test = getBollingerValues(IBM_Data,10)
