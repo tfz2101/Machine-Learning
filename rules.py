@@ -20,16 +20,16 @@ class tradingRules(object):
         self.unit = 500
 
 
-    def ruleSTD(self,indicators,thresh0,thresh1_High,thresh1_Low,thresh2):
+    def ruleSTD(self,indicators,thresh0_High,thresh0_Low,thresh1_High,thresh1_Low,thresh2_High,thresh2_Low):
         orders = []
         self.position = 0
         self.lastEntryDate = dt.datetime(1800,1,1)
         for i in range(0,indicators.shape[0]):
             tempPos = self.position
-            if (indicators.iloc[i,0] >= thresh0) and (indicators.iloc[i,1] >= thresh1_High) and (indicators.iloc[i,2] >= thresh2):
+            if (indicators.iloc[i,0] >= thresh0_High) and (indicators.iloc[i,1] >= thresh1_High) and (indicators.iloc[i,2] >= thresh2_High):
                temp = [indicators.index.values[i],'IBM','BUY',self.unit]
                tempPos =+ self.unit
-            if (indicators.iloc[i,0] < -thresh0) and (indicators.iloc[i,1] < thresh1_Low) and (indicators.iloc[i,2] < -thresh2):
+            if (indicators.iloc[i,0] < thresh0_Low) and (indicators.iloc[i,1] < thresh1_Low) and (indicators.iloc[i,2] < thresh2_Low):
                temp = [indicators.index.values[i],'IBM','SELL',self.unit]
                tempPos =- self.unit
             tempDate = dt.datetime.utcfromtimestamp(indicators.index.values[0].tolist()/1e9)
