@@ -196,9 +196,9 @@ print('buytrigs',buyTrigs)
 print('selltrigs',sellTrigs)
 
 plt.axvline(x = buyTrigs['Date'].values[0],ymin=0.2, ymax=0.5,color='g')
-plt.axvline(x = buyTrigs['Date'].values[1],ymin=0.5, ymax=0.7,color='k')
-plt.axvline(x = sellTrigs['Date'].values[0],ymin=0.25, ymax=0.75,color='r')
-plt.axvline(x = sellTrigs['Date'].values[1],ymin=0.25, ymax=0.75,color='k')
+plt.axvline(x = buyTrigs['Date'].values[1],ymin=0.3, ymax=0.7,color='g')
+plt.axvline(x = sellTrigs['Date'].values[0],ymin=0.25, ymax=0.75,color='k')
+plt.axvline(x = sellTrigs['Date'].values[1],ymin=0.6, ymax=1.0,color='r')
 
 
 #plt.axvline(x = sellTrigs['Date'],ymin=0.25, ymax=0.75,color='r')
