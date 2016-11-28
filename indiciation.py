@@ -29,7 +29,7 @@ def getMACDValues(data,slowFreq, fastFreq, stdFreq, plot = False):
     MACD = diff/diff_std
 
     '''
-    df = pd.DataFrame()
+    df = pd.DataFrame()d
     df['fast MA'] = fast_MA['IBM']
     df['slow MA'] = slow_MA['IBM']
     df['Difference'] =  diff['IBM']
