@@ -12,6 +12,8 @@ import analysis
 import cProfile
 import re
 import RTLearner_TRADING as RTLearner
+import matplotlib.pyplot as plt
+
 
 def calcBookMV(book,date):
     for i in range(0,book.shape[0]):
@@ -56,10 +58,6 @@ def isOverLevered(book,cash, thresh):
         return False
 
 def compute_portvals(orders, start_val = 1000000,levThresh = 3.0):
-    # this is the function the autograder will call to test your code
-    #TODO: Your code here
-    #FIXME: ??
-
     cash = start_val
 
     lastOrderRow = orders.shape[0]
@@ -74,13 +72,10 @@ def compute_portvals(orders, start_val = 1000000,levThresh = 3.0):
         newDates[i]=dt.datetime.utcfromtimestamp(temp)
 
     portVals = pd.DataFrame(index=newDates,columns=['Value'])
-    lastPortRow = portVals.shape[0]
 
     book = pd.DataFrame(columns=['Symbol','Position','Price','Value'])
 
     for day in portVals.index.values:
-        originalBook = book.iloc[:,:]
-        originalCash = cash
         for i in range(0,lastOrderRow):
             if pd.Timestamp(day).to_pydatetime() == orders.ix[i,'Date'].to_datetime():
                 order = orders.ix[i,:]
@@ -88,12 +83,10 @@ def compute_portvals(orders, start_val = 1000000,levThresh = 3.0):
                 book,cash = updateBook(book,order,cash)
 
         book = calcBookMV(book,day)
-        if isOverLevered(book,cash,levThresh):
-            book = originalBook
-            cash = originalCash
-
         portV = book['Value'].sum()
 
+        #print('portv',portV)
+        #print('cash',cash)
         mv = portV + cash
         portVals.ix[day,'Value']=mv
 
@@ -104,6 +97,7 @@ def simulate_Orders(orders,sd=np.nan,ed=np.nan,sv = 100000):
 
     # Process orders
     portvals = compute_portvals(orders = orders, start_val = sv, levThresh=1000000000.0)
+    #print('portvals',portvals)
     if isinstance(portvals, pd.DataFrame):
         portvals = portvals[portvals.columns[0]] # just get the first column
     else:
@@ -115,32 +109,13 @@ def simulate_Orders(orders,sd=np.nan,ed=np.nan,sv = 100000):
     print('Portfolio Return: ',float(ev)/sv - 1)
 
 
-
     # Get portfolio stats
-    cum_ret, avg_daily_ret, std_daily_ret, sharpe_ratio,end_value = analysis.assess_portfolio(sd=sd,ed=ed,syms=['IBM'],allocs=[1],sv=sv)
-    print('Portfolio Return, Buy and Hold: ',cum_ret)
-
+    #cum_ret, avg_daily_ret, std_daily_ret, sharpe_ratio,end_value = analysis.assess_portfolio(sd=sd,ed=ed,syms=['IBM'],allocs=[1],sv=sv)
+    #print('Portfolio Return, Buy and Hold: ',cum_ret)
 
 
     '''
     cum_ret_SPY, avg_daily_ret_SPY, std_daily_ret_SPY, sharpe_ratio_SPY = analysis.assess_portfolio(sd=start_date,ed=end_date,syms=['SPY'],allocs=[1])
-
-    # Compare portfolio against $SPX
-    print "Date Range: {} to {}".format(start_date, end_date)
-    print
-    print "Sharpe Ratio of Fund: {}".format(sharpe_ratio)
-    print "Sharpe Ratio of SPY : {}".format(sharpe_ratio_SPY)
-    print
-    print "Cumulative Return of Fund: {}".format(cum_ret)
-    print "Cumulative Return of SPY : {}".format(cum_ret_SPY)
-    print
-    print "Standard Deviation of Fund: {}".format(std_daily_ret)
-    print "Standard Deviation of SPY : {}".format(std_daily_ret_SPY)
-    print
-    print "Average Daily Return of Fund: {}".format(avg_daily_ret)
-    print "Average Daily Return of SPY : {}".format(avg_daily_ret_SPY)
-    print
-    print "Final Portfolio Value: {}".format(portvals[-1])
     '''
 
 def mapYFromReturn(prices, lookFwd, sellTresh=0.0, buyThresh=0.0):
@@ -166,27 +141,75 @@ symbols = ['IBM']
 IBM_Data = get_data(symbols,datesIndex,addSPY=False)
 IBM_Data= IBM_Data.dropna()
 
-MACD = indicators.getMACDValues(IBM_Data,100,20,100)
-RSI = indicators.getRSIValues(IBM_Data,20)
-Boll = indicators.getBollingerValues(IBM_Data,10)
+MACD = indicators.getMACDValues(IBM_Data,50,15,50)
+RSI = indicators.getRSIValues(IBM_Data,30)
+Boll = indicators.getBollingerValues(IBM_Data,30)
 indicator = pd.concat([MACD,RSI,Boll], axis = 1, join='inner')
-print('full indicator data',indicator.head(50))
+#print('full indicator data',indicator.head(50))
+
 
 
 #GET ORDERS
+
 rulesOb = rule_based.tradingRules(holdingPer=10,maxHoldings=500)
-orders = rule_based.getOrders(indicator,rulesOb.ruleSTD,**{'thresh0':1.0,'thresh1_High':50,'thresh1_Low':50,'thresh2':0.0})
+orders = rule_based.getOrders(indicator,rulesOb.ruleSTD,**{'thresh0_High':0.5,'thresh0_Low':-1.5,'thresh1_High':50,'thresh1_Low':40,'thresh2_High':0.5,'thresh2_Low':-1.5})
+
+
+def addClosingOrder(orders,ed,unit =500):
+    if orders.ix[orders.shape[0]-1,'Order'] == 'BUY':
+        closeOrder = pd.DataFrame([[ed,'IBM','SELL',unit]],columns=orders.columns.values)
+    elif orders.ix[orders.shape[0]-1,'Order'] == 'SELL':
+        closeOrder = pd.DataFrame([[ed,'IBM','BUY',unit]],columns=orders.columns.values)
+    return orders.append(closeOrder,ignore_index=True)
+
+orders = addClosingOrder(orders,end_date,500)
 print(orders)
+
+bmarkOrder = pd.DataFrame([[dt.datetime(2006,1,3),'IBM','BUY',500],[dt.datetime(2009,12,31),'IBM','SELL',500]],columns=orders.columns.values)
+
+
 
 #GET RETURNS FROM ORDERS
 print('simuluating Orders')
+print('Rules Based RESULTS')
 simulate_Orders(orders,sd=start_date,ed=end_date)
 
+print('Benchmark Based RESULTS')
+simulate_Orders(bmarkOrder,sd=start_date,ed=end_date)
+
+rules_val =  compute_portvals(orders,100000)
+bmark_val =  compute_portvals(bmarkOrder,100000)
+vals = pd.concat([rules_val,bmark_val],axis=1,join='outer',ignore_index=True)
+vals = vals.rename(columns = {0:'Rules Values',1:'Benchmark Values'})
+vals = vals/100000
+
+#farAxis = [np.datetime64('2005-10-25')]
+#farAxis1 = vals.index.values.tolist()
+#farAxis2 = farAxis + farAxis1
+#print(type(farAxis))
+#print(type(farAxis1))
+plt.plot(vals.index, vals['Rules Values'], 'b-')
+buyTrigs = orders[orders['Order']=='BUY']
+sellTrigs = orders[orders['Order']=='SELL']
+
+print('buytrigs',buyTrigs)
+print('selltrigs',sellTrigs)
+
+plt.axvline(x = buyTrigs['Date'].values[0],ymin=0.2, ymax=0.5,color='g')
+plt.axvline(x = buyTrigs['Date'].values[1],ymin=0.5, ymax=0.7,color='k')
+plt.axvline(x = sellTrigs['Date'].values[0],ymin=0.25, ymax=0.75,color='r')
+plt.axvline(x = sellTrigs['Date'].values[1],ymin=0.25, ymax=0.75,color='k')
+
+
+#plt.axvline(x = sellTrigs['Date'],ymin=0.25, ymax=0.75,color='r')
+plt.axis(xmin=np.datetime64('2005-10-25'),xmax=np.datetime64('2010-03-25'))
+plt.show()
 
 #APPLY RTLEARNER
+'''
 
-Y = mapYFromReturn(IBM_Data,10,buyThresh=0.03,sellTresh=-0.03)
-#print('Y',Y)
+Y = mapYFromReturn(IBM_Data,10,buyThresh=0.05,sellTresh=-0.05)
+
 
 full_data = pd.concat([Y,indicator],axis = 1, join='inner')
 full_data = full_data.dropna(axis=0)
@@ -194,11 +217,9 @@ print('full_data',full_data)
 
 r_Y = np.array(full_data.iloc[:,0].values)
 r_Y = r_Y.reshape((full_data.shape[0],1))
-#print(r_Y)
 
 r_X = full_data.iloc[:,range(1,full_data.shape[1])]
 r_X = np.array(r_X.values)
-#print('r_X',r_X)
 
 rt =  RTLearner.RTLearner(leaf_size=5)
 rt.addEvidence(r_X,r_Y)
@@ -208,7 +229,6 @@ preds_label = ['BUY' if x==1 else x for x in preds_label]
 preds_label = ['SELL' if x==-1 else x for x in preds_label]
 preds_label = [np.nan if x==-0 else x for x in preds_label]
 
-print('preds',preds_label)
 qOrders = pd.DataFrame(full_data.index.values,columns=['Date'])
 qOrders['Symbol'] = 'IBM'
 qOrders['Order'] = preds_label
@@ -217,34 +237,33 @@ qOrders = qOrders.dropna(axis =0)
 qOrders = qOrders.reset_index(drop=True)
 print('Qorders',qOrders)
 
+def getOrdersCompliance(orders):
+    pos = 0
+    orders = orders.copy()
+    lastDate = pd.Timestamp(dt.datetime(1900, 5, 1))
+    for i in range(0,orders.shape[0]):
+        curDate = orders.ix[i,'Date']
+        if orders.ix[i,'Order'] == 'BUY':
+            tempPos = pos + orders.ix[i,'Shares']
+        elif orders.ix[i,'Order'] == 'SELL':
+            tempPos = pos - orders.ix[i,'Shares']
+        daysBtw = curDate - lastDate
+        if (daysBtw.days <=10) or (abs(tempPos) > 500):
+            orders.ix[i,'Shares'] = np.nan
+        else:
+            pos =  tempPos
+    #print('new orders',orders)
+    orders = orders.dropna(axis=0)
+    #print('cleaned orders',orders)
+    orders =  orders.reset_index(drop=True)
+    return orders
+
+qOrders = getOrdersCompliance(qOrders)
+qOrders = addClosingOrder(qOrders,end_date,500)
 print('simulating Qorders')
-simulate_Orders(qOrders)
-
-
-
-#OUT OF SAMPLE
+simulate_Orders(qOrders, sd=start_date,ed = end_date)
 '''
-start_date = dt.datetime(2010,1,1)
-end_date = dt.datetime(2010,12,31)
-datesIndex = pd.date_range(start_date,end_date,freq='1D').tolist()
-symbols = ['IBM']
-IBM_Data = get_data(symbols,datesIndex,addSPY=False)
-IBM_Data= IBM_Data.dropna()
 
-MACD = indicators.getMACDValues(IBM_Data,20,5,10)
-RSI = indicators.getRSIValues(IBM_Data,20)
-Boll = indicators.getBollingerValues(IBM_Data,20)
-indicator = pd.concat([MACD,RSI,Boll], axis = 1, join='inner')
-print('full indicator data',indicator.head(50))
-
-rulesOb = rule_based.tradingRules(holdingPer=10,maxHoldings=500)
-orders = rule_based.getOrders(indicator,rulesOb.ruleSTD,**{'thresh0':1,'thresh1_High':60.0,'thresh1_Low':40,'thresh2':1})
-print(orders)
-
-
-print('simuluating Orders')
-simulate_Orders(orders)
-'''
 
 
 
