@@ -122,20 +122,24 @@ def mapYFromReturn(prices, lookFwd, sellTresh=0.0, buyThresh=0.0):
     Y = prices.copy()
     Y.iloc[:,0]=np.nan
     labels =  Y.copy()
-    print(prices)
     for i in range(0,prices.shape[0]-lookFwd):
         Y.iloc[i,0] = float(prices.iloc[i+lookFwd,0] - prices.iloc[i,0])/prices.iloc[i,0]
         if Y.iloc[i,0] >= buyThresh: labels.iloc[i,0] = 1
         elif Y.iloc[i,0] <=sellTresh: labels.iloc[i,0] = -1
         else: labels.iloc[i,0] = 0
-    print(Y)
-    print(labels)
     return labels
 
 
 #IN SAMPLE
-start_date = dt.datetime(2006,1,1)
-end_date = dt.datetime(2009,12,31)
+MODE = 'IN'
+
+if MODE == 'IN':
+    start_date = dt.datetime(2006,1,1)
+    end_date = dt.datetime(2009,12,31)
+elif MODE == 'OUT':
+    start_date = dt.datetime(2010,1,1)
+    end_date = dt.datetime(2010,12,31)
+
 datesIndex = pd.date_range(start_date,end_date,freq='1D').tolist()
 symbols = ['IBM']
 IBM_Data = get_data(symbols,datesIndex,addSPY=False)
@@ -145,14 +149,7 @@ MACD = indicators.getMACDValues(IBM_Data,50,15,50)
 RSI = indicators.getRSIValues(IBM_Data,30)
 Boll = indicators.getBollingerValues(IBM_Data,30)
 indicator = pd.concat([MACD,RSI,Boll], axis = 1, join='inner')
-#print('full indicator data',indicator.head(50))
 
-
-
-#GET ORDERS
-
-rulesOb = rule_based.tradingRules(holdingPer=10,maxHoldings=500)
-orders = rule_based.getOrders(indicator,rulesOb.ruleSTD,**{'thresh0_High':0.5,'thresh0_Low':-1.5,'thresh1_High':50,'thresh1_Low':40,'thresh2_High':0.5,'thresh2_Low':-1.5})
 
 
 def addClosingOrder(orders,ed,unit =500):
@@ -162,11 +159,17 @@ def addClosingOrder(orders,ed,unit =500):
         closeOrder = pd.DataFrame([[ed,'IBM','BUY',unit]],columns=orders.columns.values)
     return orders.append(closeOrder,ignore_index=True)
 
+#GET ORDERS
+
+rulesOb = rule_based.tradingRules(holdingPer=10,maxHoldings=500)
+orders = rule_based.getOrders(indicator,rulesOb.ruleSTD,**{'thresh0_High':0.5,'thresh0_Low':-1.5,'thresh1_High':50,'thresh1_Low':40,'thresh2_High':0.5,'thresh2_Low':-1.5})
 orders = addClosingOrder(orders,end_date,500)
 print(orders)
 
-bmarkOrder = pd.DataFrame([[dt.datetime(2006,1,3),'IBM','BUY',500],[dt.datetime(2009,12,31),'IBM','SELL',500]],columns=orders.columns.values)
-
+if MODE =='OUT':
+    bmarkOrder = pd.DataFrame([[dt.datetime(2010,1,4),'IBM','BUY',500],[dt.datetime(2010,12,31),'IBM','SELL',500]],columns=orders.columns.values)
+elif MODE == 'IN':
+    bmarkOrder = pd.DataFrame([[dt.datetime(2006,1,3),'IBM','BUY',500],[dt.datetime(2009,12,31),'IBM','SELL',500]],columns=orders.columns.values)
 
 
 #GET RETURNS FROM ORDERS
@@ -177,43 +180,57 @@ simulate_Orders(orders,sd=start_date,ed=end_date)
 print('Benchmark Based RESULTS')
 simulate_Orders(bmarkOrder,sd=start_date,ed=end_date)
 
+#Charting
+
 rules_val =  compute_portvals(orders,100000)
 bmark_val =  compute_portvals(bmarkOrder,100000)
+
 vals = pd.concat([rules_val,bmark_val],axis=1,join='outer',ignore_index=True)
 vals = vals.rename(columns = {0:'Rules Values',1:'Benchmark Values'})
 vals = vals/100000
 
-#farAxis = [np.datetime64('2005-10-25')]
-#farAxis1 = vals.index.values.tolist()
-#farAxis2 = farAxis + farAxis1
-#print(type(farAxis))
-#print(type(farAxis1))
 plt.plot(vals.index, vals['Rules Values'], 'b-')
+plt.plot(vals.index, vals['Benchmark Values'], 'k-')
 buyTrigs = orders[orders['Order']=='BUY']
 sellTrigs = orders[orders['Order']=='SELL']
 
 print('buytrigs',buyTrigs)
 print('selltrigs',sellTrigs)
 
-plt.axvline(x = buyTrigs['Date'].values[0],ymin=0.2, ymax=0.5,color='g')
+plt.axvline(x = buyTrigs['Date'].values[0],ymin=0.0, ymax=0.3,color='g')
 plt.axvline(x = buyTrigs['Date'].values[1],ymin=0.3, ymax=0.7,color='g')
 plt.axvline(x = sellTrigs['Date'].values[0],ymin=0.25, ymax=0.75,color='k')
-plt.axvline(x = sellTrigs['Date'].values[1],ymin=0.6, ymax=1.0,color='r')
+plt.axvline(x = sellTrigs['Date'].values[1],ymin=0.6, ymax=1.0,color='k')
 
 
 #plt.axvline(x = sellTrigs['Date'],ymin=0.25, ymax=0.75,color='r')
 plt.axis(xmin=np.datetime64('2005-10-25'),xmax=np.datetime64('2010-03-25'))
 plt.show()
 
+
 #APPLY RTLEARNER
 '''
 
-Y = mapYFromReturn(IBM_Data,10,buyThresh=0.05,sellTresh=-0.05)
+#Contingent if Out of Sample Mode
+if MODE =='IN':
+    start_date = dt.datetime(2006,1,1)
+    end_date = dt.datetime(2009,12,31)
+    datesIndex = pd.date_range(start_date,end_date,freq='1D').tolist()
+    symbols = ['IBM']
+    IBM_Data = get_data(symbols,datesIndex,addSPY=False)
+    IBM_Data= IBM_Data.dropna()
 
+    MACD = indicators.getMACDValues(IBM_Data,50,15,50)
+    RSI = indicators.getRSIValues(IBM_Data,30)
+    Boll = indicators.getBollingerValues(IBM_Data,30)
+    indicator = pd.concat([MACD,RSI,Boll], axis = 1, join='inner')
+
+
+
+Y = mapYFromReturn(IBM_Data,10,buyThresh=0.05,sellTresh=-0.05)
 
 full_data = pd.concat([Y,indicator],axis = 1, join='inner')
 full_data = full_data.dropna(axis=0)
-print('full_data',full_data)
 
 r_Y = np.array(full_data.iloc[:,0].values)
 r_Y = r_Y.reshape((full_data.shape[0],1))
@@ -221,8 +238,35 @@ r_Y = r_Y.reshape((full_data.shape[0],1))
 r_X = full_data.iloc[:,range(1,full_data.shape[1])]
 r_X = np.array(r_X.values)
 
+np.random.seed(1)
 rt =  RTLearner.RTLearner(leaf_size=5)
 rt.addEvidence(r_X,r_Y)
+
+
+
+
+#Contingent if Out of Sample Mode
+if MODE == 'OUT':
+    start_date = dt.datetime(2010,1,1)
+    end_date = dt.datetime(2010,12,31)
+    datesIndex = pd.date_range(start_date,end_date,freq='1D').tolist()
+    symbols = ['IBM']
+    IBM_Data = get_data(symbols,datesIndex,addSPY=False)
+    IBM_Data= IBM_Data.dropna()
+
+    MACD = indicators.getMACDValues(IBM_Data,50,15,50)
+    RSI = indicators.getRSIValues(IBM_Data,30)
+    Boll = indicators.getBollingerValues(IBM_Data,30)
+    indicator = pd.concat([MACD,RSI,Boll], axis = 1, join='inner')
+    indicator = indicator.dropna(axis=0)
+    full_data = indicator
+    r_X = np.array(indicator.values)
+
+
+
+
+
+
 preds = rt.query(r_X[:,:])
 preds_label = preds.tolist()
 preds_label = ['BUY' if x==1 else x for x in preds_label]
@@ -262,10 +306,74 @@ qOrders = getOrdersCompliance(qOrders)
 qOrders = addClosingOrder(qOrders,end_date,500)
 print('simulating Qorders')
 simulate_Orders(qOrders, sd=start_date,ed = end_date)
+
+
+
+rules_val =  compute_portvals(orders,100000)
+bmark_val =  compute_portvals(bmarkOrder,100000)
+q_val =  compute_portvals(qOrders,100000)
+
+tradingDays = IBM_Data.shape[0]
+print('trading days',tradingDays)
+
+sv = 100000
+ev_rules = rules_val.iloc[rules_val.shape[0]-1] - sv
+print('Rules PnL: ',ev_rules)
+ev_rules_std = rules_val.std()
+print('Rules PnL STD: ',ev_rules_std)
+print('Rules PnL Sharpe Ratio: ',float(ev_rules)/tradingDays/ev_rules_std)
+
+
+ev_bmark = bmark_val.iloc[bmark_val.shape[0]-1] - sv
+print('BMark PnL: ',ev_bmark)
+bmark_val_std = bmark_val.std()
+print('bmark val std',bmark_val_std)
+print('BMark PnL Sharpe Ratio: ',float(ev_bmark)/tradingDays/bmark_val_std)
+
+ev_q_val= q_val.iloc[q_val.shape[0]-1] - sv
+print('RT PnL: ',ev_q_val)
+q_val_std = q_val.std()
+print('q val std',q_val_std)
+print('RT PnL Sharpe Ratio: ',float(ev_q_val)/tradingDays/q_val_std)
 '''
 
+#Charting
+'''
+vals = pd.concat([rules_val,bmark_val,q_val],axis=1,join='outer',ignore_index=True)
+vals = vals.rename(columns = {0:'Rules Values',1:'Benchmark Values',2:'RT Learner Values'})
+vals = vals/100000
+vals = vals.fillna(method='backfill')
+print('vals',vals)
+
+plt.plot(vals.index, vals['Benchmark Values'], 'k-')
+plt.plot(vals.index, vals['Rules Values'], 'b-')
+plt.plot(vals.index, vals['RT Learner Values'], 'g-')
 
 
 
+qOrders_Temp = qOrders.copy()
+qOrders_Temp.ix[range(1,qOrders_Temp.shape[0],2),'Order'] = 'CLOSE'
+
+buyTrigs = qOrders_Temp[qOrders_Temp['Order']=='BUY'].reset_index(drop=True)
+sellTrigs = qOrders_Temp[qOrders_Temp['Order']=='SELL'].reset_index(drop=True)
+closeTrigs = qOrders_Temp[qOrders_Temp['Order']=='CLOSE'].reset_index(drop=True)
+
+for i in buyTrigs.index.values:
+    plt.axvline(x = buyTrigs['Date'].values[i],ymin=0.05, ymax=0.95,color='g')
+for i in sellTrigs.index.values:
+    plt.axvline(x = sellTrigs['Date'].values[i],ymin=0.05, ymax=0.95,color='r')
+for i in closeTrigs.index.values:
+    plt.axvline(x = closeTrigs['Date'].values[i],ymin=0.05, ymax=0.95,color='k')
+
+
+
+
+if MODE == 'IN':
+    plt.axis(xmin=np.datetime64('2005-10-25'),xmax=np.datetime64('2010-03-25'))
+elif MODE == 'OUT':
+    plt.axis(xmin=np.datetime64('2009-10-25'),xmax=np.datetime64('2011-03-25'))
+
+plt.show()
+'''
 
 
