@@ -1,4 +1,6 @@
-
+"""
+Template for implementing StrategyLearner  (c) 2016 Tucker Balch
+"""
 
 import datetime as dt
 import QLearner as ql
@@ -65,9 +67,9 @@ class StrategyLearner(object):
         MACD_S = self.getIndicatorStates(indicator.iloc[:,0],self.MACD_Bins)
         RSI_S = self.getIndicatorStates(indicator.iloc[:,1],self.RSI_Bins)
         Boll_S = self.getIndicatorStates(indicator.iloc[:,2],self.Boll_Bins)
-        print('MACD_S',MACD_S)
-        print('RSI_S',RSI_S)
-        print('Boll_S',Boll_S)
+        #print('MACD_S',MACD_S)
+        #print('RSI_S',RSI_S)
+        #print('Boll_S',Boll_S)
 
         num_states = 6553
         num_actions = 3
@@ -93,12 +95,14 @@ class StrategyLearner(object):
                 pos = self.getDirectsFromState(learner.s)[3]
                 r = self.computeOneDayPnl(indicator.iloc[:,3],i-1,i,pos)
                 action = learner.query(s_prime,r)
-  
+
+        '''
         # example use with new colname 
         volume_all = ut.get_data(syms, dates, colname = "Volume")  # automatically adds SPY
         volume = volume_all[syms]  # only portfolio symbols
         volume_SPY = volume_all['SPY']  # only SPY, for comparison later
         if self.verbose: print volume
+        '''
 
     # this method should use the existing policy and test it against new data
     def testPolicy(self, symbol = "IBM", \
@@ -108,12 +112,24 @@ class StrategyLearner(object):
 
         # here we build a fake set of trades
         # your code should return the same sort of data
-        dates = pd.date_range(sd, ed)
-        prices_all = ut.get_data([symbol], dates)  # automatically adds SPY
-        trades = prices_all[[symbol,]]  # only portfolio symbols
-        trades_SPY = prices_all['SPY']  # only SPY, for comparison later
+
+        datesIndex = pd.date_range(sd,ed,freq='1D').tolist()
+        symbols = [symbol]
+        Stock_Data = get_data(symbols,datesIndex,addSPY=False)
+        Stock_Data= Stock_Data.dropna()
 
         qTab = self.learner.qTab
+
+        MACD = indicators.getMACDValues(Stock_Data,50,15,50)
+        RSI = indicators.getRSIValues(Stock_Data,30)
+        Boll = indicators.getBollingerValues(Stock_Data,30)
+        indicator = pd.concat([MACD,RSI,Boll,Stock_Data], axis = 1, join='inner')
+        indicator = indicator.dropna()
+        indicator = indicator.reset_index(drop=True)
+        print('Indicator',indicator)
+        self.MACD_Bins = [0.5,0.75,1.5,2.25,3.0]
+        self.RSI_Bins = [10.0,30.0,50.0,70.0,90.0]
+        self. Boll_Bins = [0.5,0.75,1.5,2.25,3.0]
         MACD_S = self.getIndicatorStates(indicator.iloc[:,0],self.MACD_Bins)
         RSI_S = self.getIndicatorStates(indicator.iloc[:,1],self.RSI_Bins)
         Boll_S = self.getIndicatorStates(indicator.iloc[:,2],self.Boll_Bins)
@@ -128,16 +144,18 @@ class StrategyLearner(object):
         rar = 0.5
         radr = 0.99
 
-        trades.values[:,:] = 0 # set them all to nothing
+        trades =  indicator.iloc[:,3].copy()
+        trades.values[:] = 0 # set them all to nothing
+        
+        for i in range(0,trades.shape[0]):
+            
 
-
-        trades.values[3,:] = 500 # add a BUY at the 4th date
-        trades.values[5,:] = -500 # add a SELL at the 6th date 
-        trades.values[6,:] = -500 # add a SELL at the 7th date 
+        '''
         trades.values[8,:] = 1000 # add a BUY at the 9th date
         if self.verbose: print type(trades) # it better be a DataFrame!
         if self.verbose: print trades
         if self.verbose: print prices_all
+        '''
         return trades
 
 if __name__=="__main__":
@@ -146,3 +164,4 @@ if __name__=="__main__":
 
 strat = StrategyLearner()
 strat.addEvidence()
+strat.testPolicy()
