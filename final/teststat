@@ -1,6 +1,4 @@
-"""
-Test a Strategy Learner.  (c) 2016 Tucker Balch
-"""
+
 
 import pandas as pd
 import datetime as dt
