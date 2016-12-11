@@ -1,178 +1,298 @@
-"""
-Template for implementing QLearner  (c) 2015 Tucker Balch
-"""
 
+
+import datetime as dt
+import QLearner as ql
+import pandas as pd
+import util as ut
+import indicators
 import numpy as np
 import random as rand
-import time
+from util import get_data
 
-class QLearner(object):
+class StrategyLearner(object):
 
-    def convertActionToState(self,s_old,a):
-        # update the test location
-        s_new = 0
-        if a == 0: #north
-            s_new = s_old - 10
-        elif a == 1: #east
-            s_new = s_old + 1
-        elif a == 2: #south
-            s_new = s_old + 10
-        elif a == 3: #west
-            s_new = s_old - 1
-
-        if s_new >= self.num_states or s_new <0:
-            s_new = s_old
-
-        return s_new
-
-    def __init__(self, \
-        num_states=100, \
-        num_actions = 4, \
-        alpha = 0.2, \
-        gamma = 0.9, \
-        rar = 0.5, \
-        radr = 0.99, \
-        dyna = 0, \
-        verbose = False):
-
-        self.num_states = num_states
+    # constructor
+    def __init__(self, verbose = False):
         self.verbose = verbose
-        self.num_actions = num_actions
-        self.alpha = alpha
-        self.gamma = gamma
-        self.s = 0
-        self.a = 0
-        self.dyna =  dyna
-        self.rar = rar
-        self.radr = radr
+        self.positionDict = {0:-500,1:0,2:500}
 
-        #self.qTab = np.random.randint(-100,100,size=(self.num_states,self.num_actions))/100.00
-        self.qTab = np.zeros(shape=(self.num_states,self.num_actions),dtype=np.float64)
+    #helper functions
+    def getIndicatorStates(self, indicator,bins):
+        inds = indicator.values
+        out = np.digitize(inds,bins)
+        return out
 
+    def getStateFromDirects(self, directs):
+        out = 1000+ directs[0] * 1000 + directs[1] * 100 + directs[2] * 10 + directs[3]
+        return out
 
-        self.tMat = np.zeros(shape=(self.num_states,self.num_actions,self.num_states))
-        #self.tMat.fill(np.nan)
-        self.tMat.fill(0)
-        self.tMat.tolist()
+    def getDirectsFromState(self, state):
+        strState = str(state)
+        out = []
+        for i in range(0,len(strState)):
+            out.append(int(strState[i]))
+        out[0]=out[0]-1
+        return out
 
-        self.rMat = np.zeros(shape=(self.num_states,self.num_actions))
-        self.rMat.fill(-1.0)
+    def computeOneDayPnl(self, prices, day0,day1,position):
+        assert isinstance(prices,pd.Series),"Prices has to be a Series, not DataFrame"
+        shares = self.positionDict[position]
+        diff = prices.iloc[day1] - prices.iloc[day0]
+        pnl = shares * diff
+        return pnl
 
-    def querysetstate(self, s):
-        """
-        @summary: Update the state without updating the Q-table
-        @param s: The new state
-        @returns: The selected action
-        """
-        self.s = s
-        action  = self.qTab[s,:].argmax()
+    # this method should create a QLearner, and train it for trading
+    def addEvidence(self, symbol = "IBM", \
+        sd=dt.datetime(2008,1,1), \
+        ed=dt.datetime(2009,1,1), \
+        sv = 10000):
 
-        isRandAct = np.random.choice([True,False],p=[self.rar,1-self.rar])
-        if isRandAct:
-            action = np.random.choice(range(0,self.num_actions))
-            #print(action)
-        self.rar = self.rar * self.radr
+        datesIndex = pd.date_range(sd,ed,freq='1D').tolist()
+        symbols = [symbol]
+        Stock_Data = get_data(symbols,datesIndex,addSPY=False)
+        Stock_Data= Stock_Data.dropna()
 
+        MACD = indicators.getMACDValues(Stock_Data,50,15,50)
+        RSI = indicators.getRSIValues(Stock_Data,30)
+        Boll = indicators.getBollingerValues(Stock_Data,30)
+        indicator = pd.concat([MACD,RSI,Boll,Stock_Data], axis = 1, join='inner')
+        indicator = indicator.dropna()
+        indicator = indicator.reset_index(drop=True)
+        #print('Indicator',indicator)
+        self.MACD_Bins = [0.5,0.75,1.5,2.25,3.0]
+        self.RSI_Bins = [10.0,30.0,50.0,70.0,90.0]
+        self. Boll_Bins = [0.5,0.75,1.5,2.25,3.0]
+        MACD_S = self.getIndicatorStates(indicator.iloc[:,0],self.MACD_Bins)
+        RSI_S = self.getIndicatorStates(indicator.iloc[:,1],self.RSI_Bins)
+        Boll_S = self.getIndicatorStates(indicator.iloc[:,2],self.Boll_Bins)
+        #print('MACD_S',MACD_S)
+        #print('RSI_S',RSI_S)
+        #print('Boll_S',Boll_S)
 
-        if self.verbose: print "s =", s,"a =",action
+        num_states = 6553
+        num_actions = 3
+        alpha = 0.2
+        gamma = 0.9
+        rar = 0.5
+        radr = 0.99
 
-        self.a = action
+        self.learner = ql.QLearner(num_states = num_states,num_actions=num_actions,alpha=alpha,gamma=gamma,rar=rar,radr=radr)
+        learner = self.learner
+        initial_s = [MACD_S[0],RSI_S[0],Boll_S[0],1]
+        initial_s = self.getStateFromDirects(initial_s)
+        #print('initial_s',initial_s)
 
-        return action
+        # add your code to do learning here
+        rand.seed(5)
+        for iteration in range(0,10):
+            action = self.learner.querysetstate(initial_s) #set the state and get first action
+            for i in range(1,indicator.shape[0]):
 
-
-
-    def query(self,s_prime,r):
-        """
-        @summary: Update the Q table and return an action
-        @param s_prime: The new state
-        @param r: The ne state
-        @returns: The selected action
-        """
-
-        qTab = self.qTab
-        tMat = self.tMat
-        rMat = self.rMat
-
-
-        qMaxT = qTab[s_prime,:].max()
-        qTab[self.s,self.a] = (1-self.alpha)*qTab[self.s,self.a] + self.alpha * (r + self.gamma * qMaxT)
-        action = qTab[s_prime,:].argmax()
-
-
-        if tMat[self.s][self.a][s_prime] == np.nan:
-           tMat[self.s][self.a][s_prime] = 1
-
-        else:
-           tMat[self.s][self.a][s_prime] =+ 1
-
-        tMat[self.s,self.a,s_prime] =+1
-        rMat[self.s,self.a] = (1-self.alpha) * rMat[self.s,self.a] + self.alpha * r
-
-        #dyna_start = time.time()
-        if self.dyna != 0:
-            temp_s_arr = np.random.choice(range(0,self.num_states),size=self.dyna,replace=True)
-            temp_a_arr = np.random.choice(range(0,self.num_actions),size=self.dyna,replace=True)
-            temp_p_mat = np.array(tMat)
-            temp_p_mat = temp_p_mat.astype(dtype=np.float64)
-            temp_p_mat = temp_p_mat/temp_p_mat.sum(axis=2,keepdims=True)
-            temp_p_mat = np.nan_to_num(temp_p_mat)
-            #print(temp_p_mat)
-
-
-            for i in range(0, self.dyna):
-                temp_s = temp_s_arr[i]
-                temp_a = temp_a_arr[i]
-                allErr = sum(tMat[temp_s][temp_a])
-                if allErr==0:
-                    continue
-                    #randA = np.random.choice(range(0,self.num_actions))
-                    #temp_s_p = self.convertActionToState(temp_s,randA)
-                #temp_p = tMat[temp_s][temp_a]/sum(tMat[temp_s][temp_a])
-                temp_p = temp_p_mat[temp_s,temp_a,:]
-
-                #print('temp p', temp_p)
-                temp_s_p = np.random.choice(range(0,self.num_states),p=temp_p)
-                #print('temp s_p', temp_s_p)
-
-                qMax_Temp = qTab[temp_s_p,:].max()
-                qTab[temp_s,temp_a] = (1-self.alpha)*qTab[temp_s,temp_a] + self.alpha * (rMat[temp_s,temp_a] + self.gamma * qMax_Temp)
-
-            '''
-            print('temp s', temp_s)
-            print('temp a', temp_a)
-            print('temp p', temp_p)
-            print('temp s_p', temp_s_p)
-            print('qtab row',qTab[temp_s_p,:])
-            print('qtab max',qTab[temp_s_p,:].max())
-            '''
+                #move to new location according to action and then get a new action
+                s = action
+                s_prime = self.getStateFromDirects([MACD_S[i],RSI_S[i],Boll_S[i],s])
+                pos = self.getDirectsFromState(learner.s)[3]
+                r = self.computeOneDayPnl(indicator.iloc[:,3],i-1,i,pos)
+                action = learner.query(s_prime,r)
 
 
-        isRandAct = np.random.choice([True,False],p=[self.rar,1-self.rar])
-        if isRandAct:
-            action = np.random.choice(range(0,self.num_actions))
-        self.rar = self.rar * self.radr
+    # this method should use the existing policy and test it against new data
+    def testPolicy(self, symbol = "IBM", \
+        sd=dt.datetime(2009,1,1), \
+        ed=dt.datetime(2010,1,1), \
+        sv = 10000):
 
-        if self.verbose: print "s =", s_prime,"a =",action,"r =",r
+        datesIndex = pd.date_range(sd,ed,freq='1D').tolist()
+        symbols = [symbol]
+        Stock_Data = get_data(symbols,datesIndex,addSPY=False)
+        Stock_Data= Stock_Data.dropna()
 
-        self.s = s_prime
-        self.a = action
+        qTab = self.learner.qTab
 
-        return action
+        MACD = indicators.getMACDValues(Stock_Data,50,15,50)
+        RSI = indicators.getRSIValues(Stock_Data,30)
+        Boll = indicators.getBollingerValues(Stock_Data,30)
+        indicator = pd.concat([MACD,RSI,Boll,Stock_Data], axis = 1, join='inner')
+        indicator_raw = indicator.dropna()
+        indicator = indicator_raw.reset_index(drop=True,inplace=False)
+
+        MACD_S = self.getIndicatorStates(indicator.iloc[:,0],self.MACD_Bins)
+        RSI_S = self.getIndicatorStates(indicator.iloc[:,1],self.RSI_Bins)
+        Boll_S = self.getIndicatorStates(indicator.iloc[:,2],self.Boll_Bins)
+
+        trades = pd.DataFrame(indicator.iloc[:,3].values,index = indicator_raw.index.values)
+        trades.values[:] = 0 # set them all to nothing
+
+        curPos = 1
+        for i in range(0,indicator.shape[0]):
+
+            oldPos = curPos
+            #print('oldpos',oldPos)
+            direct = [MACD_S[i],RSI_S[i],Boll_S[i],curPos]
+            state = self.getStateFromDirects(direct)
+            curPos = qTab[state,:].argmax()
+            print('q row',qTab[state,:])
+            if curPos != oldPos:
+                trade = 500 * (curPos - oldPos)
+
+            trades.iloc[i,0] = trade
+            #print('newState',curPos)
+        print('trades',trades)
+        return trades
+
+#if __name__=="__main__":
+#    print "One does not simply think up a strategy"
 
 
-if __name__=="__main__":
-    print "Remember Q from Star Trek? Well, this isn't him"
+strat = StrategyLearner()
+strat.addEvidence()
+strat.testPolicy()
 
 
+import datetime as dt
+import QLearner as ql
+import pandas as pd
+import util as ut
+import indicators
+import numpy as np
+import random as rand
+from util import get_data
 
-learner = QLearner(num_states=100,\
-    num_actions = 4, \
-    alpha = 0.2, \
-    gamma = 0.9, \
-    rar = 0.98, \
-    radr = 0.999, \
-    dyna = 0, \
-    verbose=False) #initialize the learner
+class StrategyLearner(object):
 
-action = learner.querysetstate(0)
+    # constructor
+    def __init__(self, verbose = False):
+        self.verbose = verbose
+        self.positionDict = {0:-500,1:0,2:500}
+
+    #helper functions
+    def getIndicatorStates(self, indicator,bins):
+        inds = indicator.values
+        out = np.digitize(inds,bins)
+        return out
+
+    def getStateFromDirects(self, directs):
+        out = 1000+ directs[0] * 1000 + directs[1] * 100 + directs[2] * 10 + directs[3]
+        return out
+
+    def getDirectsFromState(self, state):
+        strState = str(state)
+        out = []
+        for i in range(0,len(strState)):
+            out.append(int(strState[i]))
+        out[0]=out[0]-1
+        return out
+
+    def computeOneDayPnl(self, prices, day0,day1,position):
+        assert isinstance(prices,pd.Series),"Prices has to be a Series, not DataFrame"
+        shares = self.positionDict[position]
+        diff = prices.iloc[day1] - prices.iloc[day0]
+        pnl = shares * diff
+        return pnl
+
+    # this method should create a QLearner, and train it for trading
+    def addEvidence(self, symbol = "IBM", \
+        sd=dt.datetime(2008,1,1), \
+        ed=dt.datetime(2009,1,1), \
+        sv = 10000):
+
+        datesIndex = pd.date_range(sd,ed,freq='1D').tolist()
+        symbols = [symbol]
+        Stock_Data = get_data(symbols,datesIndex,addSPY=False)
+        Stock_Data= Stock_Data.dropna()
+
+        MACD = indicators.getMACDValues(Stock_Data,50,15,50)
+        RSI = indicators.getRSIValues(Stock_Data,30)
+        Boll = indicators.getBollingerValues(Stock_Data,30)
+        indicator = pd.concat([MACD,RSI,Boll,Stock_Data], axis = 1, join='inner')
+        indicator = indicator.dropna()
+        indicator = indicator.reset_index(drop=True)
+        #print('Indicator',indicator)
+        self.MACD_Bins = [0.5,0.75,1.5,2.25,3.0]
+        self.RSI_Bins = [10.0,30.0,50.0,70.0,90.0]
+        self. Boll_Bins = [0.5,0.75,1.5,2.25,3.0]
+        MACD_S = self.getIndicatorStates(indicator.iloc[:,0],self.MACD_Bins)
+        RSI_S = self.getIndicatorStates(indicator.iloc[:,1],self.RSI_Bins)
+        Boll_S = self.getIndicatorStates(indicator.iloc[:,2],self.Boll_Bins)
+        #print('MACD_S',MACD_S)
+        #print('RSI_S',RSI_S)
+        #print('Boll_S',Boll_S)
+
+        num_states = 6553
+        num_actions = 3
+        alpha = 0.2
+        gamma = 0.9
+        rar = 0.5
+        radr = 0.99
+
+        self.learner = ql.QLearner(num_states = num_states,num_actions=num_actions,alpha=alpha,gamma=gamma,rar=rar,radr=radr)
+        learner = self.learner
+        initial_s = [MACD_S[0],RSI_S[0],Boll_S[0],1]
+        initial_s = self.getStateFromDirects(initial_s)
+        #print('initial_s',initial_s)
+
+        # add your code to do learning here
+        rand.seed(5)
+        for iteration in range(0,10):
+            action = self.learner.querysetstate(initial_s) #set the state and get first action
+            for i in range(1,indicator.shape[0]):
+
+                #move to new location according to action and then get a new action
+                s = action
+                s_prime = self.getStateFromDirects([MACD_S[i],RSI_S[i],Boll_S[i],s])
+                pos = self.getDirectsFromState(learner.s)[3]
+                r = self.computeOneDayPnl(indicator.iloc[:,3],i-1,i,pos)
+                action = learner.query(s_prime,r)
+
+
+    # this method should use the existing policy and test it against new data
+    def testPolicy(self, symbol = "IBM", \
+        sd=dt.datetime(2009,1,1), \
+        ed=dt.datetime(2010,1,1), \
+        sv = 10000):
+
+        datesIndex = pd.date_range(sd,ed,freq='1D').tolist()
+        symbols = [symbol]
+        Stock_Data = get_data(symbols,datesIndex,addSPY=False)
+        Stock_Data= Stock_Data.dropna()
+
+        qTab = self.learner.qTab
+
+        MACD = indicators.getMACDValues(Stock_Data,50,15,50)
+        RSI = indicators.getRSIValues(Stock_Data,30)
+        Boll = indicators.getBollingerValues(Stock_Data,30)
+        indicator = pd.concat([MACD,RSI,Boll,Stock_Data], axis = 1, join='inner')
+        indicator_raw = indicator.dropna()
+        indicator = indicator_raw.reset_index(drop=True,inplace=False)
+
+        MACD_S = self.getIndicatorStates(indicator.iloc[:,0],self.MACD_Bins)
+        RSI_S = self.getIndicatorStates(indicator.iloc[:,1],self.RSI_Bins)
+        Boll_S = self.getIndicatorStates(indicator.iloc[:,2],self.Boll_Bins)
+
+        trades = pd.DataFrame(indicator.iloc[:,3].values,index = indicator_raw.index.values)
+        trades.values[:] = 0 # set them all to nothing
+
+        curPos = 1
+        for i in range(0,indicator.shape[0]):
+
+            oldPos = curPos
+            #print('oldpos',oldPos)
+            direct = [MACD_S[i],RSI_S[i],Boll_S[i],curPos]
+            state = self.getStateFromDirects(direct)
+            curPos = qTab[state,:].argmax()
+            print('q row',qTab[state,:])
+            if curPos != oldPos:
+                trade = 500 * (curPos - oldPos)
+
+            trades.iloc[i,0] = trade
+            #print('newState',curPos)
+        print('trades',trades)
+        return trades
+
+#if __name__=="__main__":
+#    print "One does not simply think up a strategy"
+
+
+strat = StrategyLearner()
+strat.addEvidence()
+strat.testPolicy()
