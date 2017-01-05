@@ -1,0 +1,23 @@
+//Variables
+var x = 42
+let y = 100 //let declares an constant
+var myStr: String = "Hello"
+
+//Control Flow
+if x < 50 {
+    print("X is smaller than 50")
+} else {
+    print("X is bigger than 50")
+}
+
+//Classes
+class ViewController{
+
+}
+
+
+func printHellow(helloString: String){
+    print(helloString)
+}
+
+printHellow(helloString:"Herroo")
