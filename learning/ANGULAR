@@ -1,0 +1,36 @@
+//HTML - index.html
+<!doctype html>
+<html>
+  <head>
+    <title>Angular App</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js"></script>
+  </head>
+  <body ng-app="flapperNews" ng-controller="MainCtrl"> <!--the ng-app addition to the tag gets picked up by Angular and let sit know to process the code-->
+    <div>
+        {{test}} <!--the double brackets is 2 way data-binding feature in Angular. This is where the Model and View are continuously update the data-->
+    </div>
+  </body>
+</html>
+
+
+
+
+
+
+//ANGULAR - app.js
+
+var app = angular.module ('flapperNews',[]);
+app.controller('MainCtrl',[
+'$scope',
+function($scope){
+    $scope.test = 'Hello World!';
+}]);
+
+
+$scope.posts = [
+    'post 1',
+    'post 2',
+    'post 3',
+    'post 4',
+    'post 5',
+]
