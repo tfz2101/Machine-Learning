@@ -1,0 +1,63 @@
+package edu.gatech.seclass.tourneymanager;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.ListView;
+
+import edu.gatech.seclass.tourneymanager.domain.Deck;
+import edu.gatech.seclass.tourneymanager.domain.House;
+
+public class PlayerPrizeHistory extends AppCompatActivity {
+
+    /**
+     * Domain for APP
+     */
+    private House _house;
+    public String username;
+    private ListView listView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.fragment_managermode_findplayerprize); //TODO: FIND REAL ACTIVITY'S NAME!
+        View rootView = View.getRootView();
+        listView = (ListView) rootView.findViewById(R.id.list);
+
+        _house = new House(this);
+        
+        username = savedInstanceState.extras.getString("username");
+         
+        Player player = _house.findPlayer(username);
+        
+        ArrayList<Prize> playerPrizes = new ArrayList<Prize>();
+        ArrayList<String> prizeList = new ArrayList<String>();
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
+        
+        int index = 0;
+        while(index < playerPrizes.size()){
+        	Prize curPrize = playerPrizes.get(index);
+        	Date prizeDate = curPrize.getDate();
+        	String strDate = dateFormat.format(prizeDate);
+        	String curLine = strDate + " " + Double.toString(curPrize.getMoney());
+        	prizeList.add(curLine);
+        }
+        
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(
+                getContext(), android.R.layout.simple_list_item_1, android.R.id.text1, prizeList);
+
+        listView.setAdapter(adapter);
+    }
+
+    
+}
