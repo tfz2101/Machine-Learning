@@ -129,6 +129,16 @@ print(diff.days)
 
 
 '''PANDAS'''
+#Add a new column to DataFrame
+a = [[1,2,3],[4,5,6]]
+p = pd.DataFrame(a)
+p['newcol'] = pd.Series(np.repeat(0,p.shape[0]))
+
+#Drop rows with NANA
+a = [[1,2,3],[4,5,6]]
+p = pd.DataFrame(a)
+p.dropna(axis=0)
+
 #List into DataFrame as a Row
 a = [1,3,4,5]
 p = pd.DataFrame([a])
@@ -148,8 +158,6 @@ b = pd.DataFrame([a],index=[10])
 #Rename Columns
 test = pd.DataFrame(columns=['A','B'])
 test = test.rename(columns={'A':1,'B':2})
-
-
 vals = pd.concat([a,b],axis=0,join='outer',ignore_index=True)
 print(vals)
 
