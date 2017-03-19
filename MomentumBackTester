@@ -4,18 +4,22 @@ import datetime as dt
 import time as time
 import os
 
-DATA_PATH = "L:\The__Book17.xlsx"
+DATA_PATH = "C:\Users\Frank Zhi\Downloads\The__Book17.xlsx"
 TAB_NAME = "Data"
+
+PRICES = "10y"
 SIGNAL_COL = "STD of Move"
 ENTRY_COL ="IsEntry"
 HIT_COL ="Hit Ratio for 1 HP"
 DIRECTION_COL = "Direction"
 CHANGE_COL = "Change"
 PNL_COL = "Pnl"
-
+REAL_VOL = "Real Vol"
+REAL_VOL_PERC = "REAL_VOL_PERC"
 file  = pd.ExcelFile(DATA_PATH)
 data = file.parse(TAB_NAME)
-data['Direction']=pd.Series(np.random.randn(data.shape[0]), index=data.index)
+data['Direction']=pd.Series(np.nan, index=data.index)
+
 
 
 def getEntrySD(sd, trigger):
@@ -23,6 +27,21 @@ def getEntrySD(sd, trigger):
         return "TRADE"
     else:
         return np.nan
+
+#NOT UTILIZED YET - MAYBE IRRELEVANT!
+def getEntrySDAdjustByVol(sd, trigger, vol):
+    adj = 1
+    if vol >= 0.04:
+        adj = 1.5
+    elif vol >= .03:
+        adj = 1.25
+    elif vol <= 0.5:
+        adj = 0.8
+    if abs(sd) > trigger:
+        return "TRADE"
+    else:
+        return np.nan
+
 
 def getHitOrNot(direction,change):
     #print(type(direction))
@@ -39,6 +58,10 @@ def getPnl(direction,change):
     assert isinstance(direction,np.float64), "Direction needs to be an integer"
     return (direction * change)
 
+
+#Calc Roll Realized Volatility
+for i in range(0,data.shape[0]):
+    data.ix[i,REAL_VOL_PERC] = data.ix[(i+1):(i+7),PRICES].std()/data.ix[(i+1):(i+7),PRICES].mean()
 
 #Calc Trade or Not column
 threshold = 1.5
@@ -60,6 +83,12 @@ for i in range(1,data.shape[0]):
     if data.loc[a,ENTRY_COL]=="TRADE":
         data.ix[i,PNL_COL]=getPnl(data.ix[i,DIRECTION_COL],data.ix[i-1,CHANGE_COL])
 
-print(data)
+TOTAL_PNL = data[PNL_COL].sum()
+PNL_STD = data[PNL_COL].std()
+TOTAL_TRADES = data[PNL_COL].count()
 
 
+print("Total PnL ", TOTAL_PNL)
+print("PnL STD ", PNL_STD)
+print("Total Trades ", TOTAL_TRADES)
+print("Sharpe Ratio", TOTAL_PNL/TOTAL_TRADES/PNL_STD)
