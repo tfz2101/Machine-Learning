@@ -6,7 +6,7 @@ import os
 #from pykalman import KalmanFilter
 import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import acf,pacf, adfuller
-import nolds
+
 
 DATA_PATH = "L:\Trade_Data.xlsx"
 TAB_NAME = "Data"
@@ -213,7 +213,7 @@ def rolling_data_fcn(data,fcn,*args,**kwargs):
     dates = data.index.values
     values = data.values
     out = []
-    stat = fcn(**kwargs)
+    stat = fcn(values,**kwargs)
     for i in range(0,values.shape[0]):
         continue
         #stat = fcn(**kwargs)
@@ -256,8 +256,9 @@ def rl_fcn(data):
 stdtst = rl_fcn(tst)
 print(stdtst)
 
-#hurst = nolds.hurst_rs(tst,)
-#print(hurst)
-kwargs ={"maxlags":2}
-rolling_data = rolling_data_fcn(pd.DataFrame(tst),dickeyfuller_fcn,**kwargs)
+
+kwargs ={"maxlag":2}
+tst_pd = pd.Series(tst)
+
+rolling_data = rolling_data_fcn(tst_pd,dickeyfuller_fcn,**kwargs)
 print(rolling_data)
