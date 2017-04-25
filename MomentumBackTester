@@ -3,9 +3,10 @@ import numpy as np
 import datetime as dt
 import time as time
 import os
-from pykalman import KalmanFilter
+#from pykalman import KalmanFilter
 import matplotlib.pyplot as plt
-from statsmodels.tsa.stattools import acf,pacf
+from statsmodels.tsa.stattools import acf,pacf, adfuller
+import nolds
 
 DATA_PATH = "L:\Trade_Data.xlsx"
 TAB_NAME = "Data"
@@ -18,10 +19,12 @@ PNL_COL = "Pnl"
 
 
 
+
+'''
 file  = pd.ExcelFile(DATA_PATH)
 data = file.parse(TAB_NAME)
 data['Direction']=pd.Series(np.random.randn(data.shape[0]), index=data.index)
-
+'''
 
 def getEntrySD(sd, trigger):
     if abs(sd) > trigger:
@@ -155,11 +158,12 @@ def getLastNHitRatioEveryLine(data, n, hitInd, acceptableValues):
 
 
 #Autocorrelation analysis
-
+'''
 DATA_PATH = "L:\Trade_Data.xlsx"
 TAB_NAME = "Data"
 file  = pd.ExcelFile(DATA_PATH)
 data = file.parse(TAB_NAME)
+'''
 
 acceptableValues = [0,1]
 '''
@@ -170,10 +174,11 @@ hr2.to_excel(writer, sheet_name='Output')
 writer.save()
 '''
 
-
+'''
 data = data.dropna()
 input = data.values
 print(data)
+'''
 
 def acf_fcn(data,lags=3,alpha=.05):
     #@FORMAT: data = np(values)
@@ -203,13 +208,56 @@ def rolling_acf_fcn(data,window):
         out.append([])
     return dates
 
+def rolling_data_fcn(data,fcn,*args,**kwargs):
+    #@FORMAT: data = df(dates,data)
+    dates = data.index.values
+    values = data.values
+    out = []
+    stat = fcn(**kwargs)
+    for i in range(0,values.shape[0]):
+        continue
+        #stat = fcn(**kwargs)
+        #out.append([stat])
+    return stat
 
-acf_data = acf_fcn(input[:,1])
-print(acf_data)
 
-acf_data_ordered = acf_fcn_highestlag(input[:,1])
-print(acf_data_ordered)
+
+# acf_data = acf_fcn(input[:,1])
+# print(acf_data)
+#
+# acf_data_ordered = acf_fcn_highestlag(input[:,1])
+# print(acf_data_ordered)
+
+
 
 
 #rolling_acf = rolling_acf_fcn(data.iloc[:,1],10)
 #print(rolling_acf)
+
+
+
+tst = np.array([1,2,1,3,2,1,4,2,1,0,2,3,1,2])
+
+def dickeyfuller_fcn(data,maxlag=1):
+    df_fcn = adfuller(data,maxlag=maxlag)
+    return df_fcn[1]
+
+df = dickeyfuller_fcn(tst)
+print(df)
+
+df = dickeyfuller_fcn(tst,maxlag=3)
+print(df)
+
+def rl_fcn(data):
+    rl = np.std(data)
+    return rl
+
+
+stdtst = rl_fcn(tst)
+print(stdtst)
+
+#hurst = nolds.hurst_rs(tst,)
+#print(hurst)
+kwargs ={"maxlags":2}
+rolling_data = rolling_data_fcn(pd.DataFrame(tst),dickeyfuller_fcn,**kwargs)
+print(rolling_data)
