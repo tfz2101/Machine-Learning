@@ -221,18 +221,25 @@ def rolling_block_data_fcn(data,fcn,gap=5,*args,**kwargs):
     return out
 
 
+DATA_PATH = "C:\Users\Frank Zhi\Downloads\home_data.xlsx"
+TAB_NAME = "Sheet1"
+file  = pd.ExcelFile(DATA_PATH)
+data = file.parse(TAB_NAME)
+
 tst = np.array([1,2,1,2,1,1,2,2,1,0,1,3,1,2,1,2,1,2,1,1,2,2,1,0,1,3,1,2])
+
+tsy_data = data.loc[:,"Change (Close to Close)"]
 
 
 kwargs ={"maxlag":2}
 tst_pd = pd.Series(tst)
 
-#rolling_df_data = rolling_block_data_fcn(tst_pd,dickeyfuller_fcn,gap=10,**kwargs)
-#print(rolling_df_data)
+rolling_df_data = rolling_block_data_fcn(tsy_data,dickeyfuller_fcn,gap=10,**kwargs)
+print(rolling_df_data)
 
-rolling_acf_data = rolling_block_data_fcn(tst_pd,acf_fcn_highestlag,gap=10)
-print(rolling_acf_data)
+rolling_acf_data = rolling_block_data_fcn(tsy_data,acf_fcn_highestlag,gap=10)
+print(pd.DataFrame(rolling_acf_data))
 
 
-#rolling_rl_data = rolling_block_data_fcn(tst_pd,rl_fcn,gap=10)
-#print(rolling_rl_data)
+rolling_rl_data = rolling_block_data_fcn(tsy_data,rl_fcn,gap=10)
+print(rolling_rl_data)
