@@ -6,6 +6,7 @@ import os
 #from pykalman import KalmanFilter
 import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import acf,pacf, adfuller
+from sklearn.cluster import KMeans
 
 
 DATA_PATH = "L:\Trade_Data.xlsx"
@@ -295,3 +296,33 @@ WRITE_PATH = "L:\Trade_Output.xlsx"
 writer = pd.ExcelWriter(WRITE_PATH, engine='xlsxwriter')
 hrs.to_excel(writer, sheet_name='Output')
 #writer.save()
+
+
+'''
+#Kmeans
+scs = []
+for i in range(2,30):
+    knn = KMeans(n_clusters=i).fit(X)
+    labels = knn.labels_
+    sc = silhouette_score(X, labels)
+    scs.append([i,sc])
+    #print(sc)
+
+scs = sorted(scs,key=itemgetter(1),reverse=True)
+scs = pd.DataFrame(scs,columns=['K','Score'])
+
+#sns.lmplot(x='K',y='Score',data=scs, fit_reg=False)
+#plt.show()
+'''
+'''
+#Finds the K that maximizes AR score
+goods  = []
+for i in range(2,20):
+    labels = KMeans(n_clusters=i).fit(X).labels_
+    labels_true = Y.tolist()
+    #labels = [3]*100+[4]
+    #labels_true = [1]*99+[0]*2
+    goodness = metrics.adjusted_rand_score(labels_true,labels)
+    goods.append([i,goodness])
+print(goods)
+'''
