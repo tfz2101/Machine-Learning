@@ -1,0 +1,85 @@
+import pandas as pd
+import numpy as np
+import datetime as dt
+import time as time
+import os
+#from pykalman import KalmanFilter
+import matplotlib.pyplot as plt
+from statsmodels.tsa.stattools import acf,pacf, adfuller
+from sklearn.cluster import KMeans
+from Momentum_Module import Signals_Testing as myST
+from sklearn.ensemble import GradientBoostingRegressor
+
+
+
+DATA_PATH = "L:\Trade_Data.xlsx"
+TAB_NAME = "Temp_Data"
+file  = pd.ExcelFile(DATA_PATH)
+data = file.parse(TAB_NAME)
+
+tst = np.array([1,2,1,2,1,1,2,2,1,0,1,3,1,2,1,2,1,2,1,1,2,2,1,0,1,3,1,2])
+
+tsy_data = data.loc[:,"Change (Close to Close)"]
+
+tst_pd = pd.Series(tst)
+
+data_traits =myST.getDataTraitsOnlyPValue(tsy_data,10)
+
+
+
+
+DATA_PATH = "L:\Trade_Data.xlsx"
+TAB_NAME = "Data"
+file  = pd.ExcelFile(DATA_PATH)
+data = file.parse(TAB_NAME)
+
+corr, matches = myST.calcSignalCorrelation(data)
+print(corr)
+print(matches)
+
+hrs = myST.getNBlockHitRatio(data.iloc[:,0],30)
+
+
+
+
+WRITE_PATH = "L:\Trade_Output.xlsx"
+WRITE_PATH2 = "L:\Trade_Output2.xlsx"
+TAB = 'Output'
+
+
+data = data_traits.iloc[1:data_traits.shape[0],:]
+
+kmeanstst = myST.kmeans_best_fit_cluster(data)
+print(kmeanstst)
+print(myST.kmeans_best_fit_cluster_labels(data))
+
+data_traits =myST.getDataTraitsOnlyPValue(tsy_data,20)
+print(data_traits)
+acfs = data_traits['Autocorrelation'].values
+acfs2 = myST.acf_fcn(acfs,lags=10)
+print(pd.DataFrame(acfs2))
+
+
+DATA_PATH = "L:\Trade_Data.xlsx"
+TAB_NAME = "two_signals"
+file  = pd.ExcelFile(DATA_PATH)
+data = file.parse(TAB_NAME)
+
+
+
+data = data.dropna(axis=0)
+print(data)
+'''
+Y = data['Change (Open to Open)'].values
+X = data.drop('Change (Open to Open)',axis=1).values
+model = myST.getSKLearnModel(Y,X,GradientBoostingRegressor)
+cv_score = myST.getCrossValScore(model,Y, X, 20)
+print(cv_score)
+print(cv_score.mean())
+'''
+
+
+ml_signals =  myST.getBlendedSignal(data,GradientBoostingRegressor,gap=100)
+ml_signals = pd.DataFrame(ml_signals)
+print(ml_signals)
+myST.write(ml_signals,WRITE_PATH,TAB)
