@@ -9,9 +9,9 @@ from statsmodels.tsa.stattools import acf,pacf, adfuller
 from sklearn.cluster import KMeans
 from Momentum_Module import Signals_Testing as myST
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.ensemble import GradientBoostingClassifier
 
-
-
+'''
 DATA_PATH = "L:\Trade_Data.xlsx"
 TAB_NAME = "Temp_Data"
 file  = pd.ExcelFile(DATA_PATH)
@@ -38,10 +38,10 @@ print(corr)
 print(matches)
 
 hrs = myST.getNBlockHitRatio(data.iloc[:,0],30)
+'''
 
 
-
-
+'''
 WRITE_PATH = "L:\Trade_Output.xlsx"
 WRITE_PATH2 = "L:\Trade_Output2.xlsx"
 TAB = 'Output'
@@ -64,11 +64,11 @@ DATA_PATH = "L:\Trade_Data.xlsx"
 TAB_NAME = "two_signals"
 file  = pd.ExcelFile(DATA_PATH)
 data = file.parse(TAB_NAME)
-
-
-
 data = data.dropna(axis=0)
 print(data)
+'''
+
+
 '''
 Y = data['Change (Open to Open)'].values
 X = data.drop('Change (Open to Open)',axis=1).values
@@ -79,7 +79,22 @@ print(cv_score.mean())
 '''
 
 
-ml_signals =  myST.getBlendedSignal(data,GradientBoostingRegressor,gap=100)
+
+DATA_PATH = "L:\Trade_Data.xlsx"
+TAB_NAME = "ML_Data"
+WRITE_PATH = "L:\Trade_Output2.xlsx"
+TAB = 'Output'
+
+
+file  = pd.ExcelFile(DATA_PATH)
+data = file.parse(TAB_NAME)
+
+data = data.drop(data.columns[[0]],axis=1)
+data = data.fillna(value=0)
+print(data)
+
+
+ml_signals =  myST.getBlendedSignal(data,GradientBoostingClassifier,gap=360)
 ml_signals = pd.DataFrame(ml_signals)
 print(ml_signals)
 myST.write(ml_signals,WRITE_PATH,TAB)
