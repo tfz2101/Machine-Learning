@@ -292,8 +292,6 @@ def getBlendedSignal(data,ml_model, gap=60):
     Y = data.iloc[:,0].values
     X = data.drop(data.columns[[0]],axis=1).values
     out = []
-    print(X)
-
 
     for i in range(X.shape[0]-gap,0,-1):
         X_ = X[(i+1):(i+gap)]
@@ -301,19 +299,12 @@ def getBlendedSignal(data,ml_model, gap=60):
         X_test = X[i]
         X_test = X_test.reshape(1,-1)
         Y_test = Y[i]
-        '''
-        print('X_',X_)
-        print('Y_',Y_)
-        print('XTEST',X_test)
-        print('YTEST',Y_test)
-        '''
 
         model = getSKLearnModel(Y_,X_, ml_model)
         pred = getSKLearnModelPredictions(model,X_test)
         out.append([dates[i],Y_test,pred[0]])
-        #print('pred',pred)
-        #print(Y_test)
 
+    #@RETURNS: [date, Y, Y_pred]
     return out
 
 
