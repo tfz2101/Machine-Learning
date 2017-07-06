@@ -119,7 +119,7 @@ def read_pcap(pcap_file):
             pass
             #fout.write('\n *ERROR HERE: %s * \n' % (e))
 
-
+    
     f.close()
 
 
