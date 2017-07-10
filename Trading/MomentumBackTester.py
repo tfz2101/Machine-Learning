@@ -1,0 +1,328 @@
+import pandas as pd
+import numpy as np
+import datetime as dt
+import time as time
+import os
+#from pykalman import KalmanFilter
+import matplotlib.pyplot as plt
+from statsmodels.tsa.stattools import acf,pacf, adfuller
+from sklearn.cluster import KMeans
+
+
+DATA_PATH = "L:\Trade_Data.xlsx"
+TAB_NAME = "Data"
+SIGNAL_COL = "STD of Move"
+ENTRY_COL ="IsEntry"
+HIT_COL ="Hit Ratio for 1 HP"
+DIRECTION_COL = "Direction"
+CHANGE_COL = "Change"
+PNL_COL = "Pnl"
+
+
+
+
+'''
+file  = pd.ExcelFile(DATA_PATH)
+data = file.parse(TAB_NAME)
+data['Direction']=pd.Series(np.random.randn(data.shape[0]), index=data.index)
+'''
+
+def getEntrySD(sd, trigger):
+    if abs(sd) > trigger:
+        return "TRADE"
+    else:
+        return np.nan
+
+def getHitOrNot(direction,change):
+    #print(type(direction))
+    assert isinstance(direction,np.float64), "Direction needs to be an integer"
+    if direction * change > 0:
+        return 1
+    else:
+        return 0
+
+def getTradeDirection(signal):
+    return (signal/abs(signal) * -1)
+
+def getPnl(direction,change):
+    assert isinstance(direction,np.float64), "Direction needs to be an integer"
+    return (direction * change)
+
+#Calc PnL Columns
+'''
+#Calc Trade or Not column
+threshold = 1.5
+for a in data.index.values:
+    data.ix[a,ENTRY_COL] = getEntrySD(data.ix[a,SIGNAL_COL],threshold)
+
+#Calc Trade Direction
+for a in data.index.values:
+    if data.loc[a,ENTRY_COL]=="TRADE":
+        data.loc[a,DIRECTION_COL] = getTradeDirection(data.loc[a,SIGNAL_COL])
+
+#Calc Hit or Not
+for i in range(1,data.shape[0]):
+    if data.loc[a,ENTRY_COL]=="TRADE":
+        data.ix[i,HIT_COL]=getHitOrNot(data.ix[i,DIRECTION_COL],data.ix[i-1,CHANGE_COL])
+
+#Calc PnL
+for i in range(1,data.shape[0]):
+    if data.loc[a,ENTRY_COL]=="TRADE":
+        data.ix[i,PNL_COL]=getPnl(data.ix[i,DIRECTION_COL],data.ix[i-1,CHANGE_COL])
+'''
+
+
+
+
+#Kalman Filter
+'''
+tau = 0.1
+kf = KalmanFilter(n_dim_obs=1,n_dim_state=2,
+                  initial_state_mean=starting_point,
+                  initial_state_covariance=np.eye(2),
+                  transition_matrices=[[1,tau],[0,1]],
+                  observation_matrices=[[1,0]],
+                  observation_covariance=3,
+                  transition_covariance=np.zeros((2,2)),
+                  transition_offsets=[0,0])
+
+
+np_data = tst_data["10y Close"].values
+
+state_means, state_covs = kf.filter(np_data)
+#tst_data['kf_predict']=pd.Series(state_means[:,0])
+#print(state_means.shape)
+
+
+times = np.arange(tst_data.shape[0])
+plt.plot(times, state_means[:,0])
+plt.plot(times, tst_data["10y Close"])
+
+#plt.show()
+
+
+tst_data['KF_Value']=state_means[:,0]
+print("tst data",tst_data)
+
+WRITE_PATH = "L:\Trade_Output.xlsx"
+writer = pd.ExcelWriter(WRITE_PATH, engine='xlsxwriter')
+tst_data.to_excel(writer, sheet_name='Data')
+writer.save()
+'''
+
+#Computes hit ratio for rolling n trades
+def getLastNHitRatio(data, n, hitInd, acceptableValues):
+    #@FORMAT: df[dates, hitOrNots]
+    out = []
+    temp = []
+    count = 0
+    for i in range(0,data.shape[0]):
+        if data.iloc[i,hitInd] in acceptableValues:
+            count = count +1
+            temp.append(data.values[i,:])
+        if count >= n:
+            hr = np.average(temp,axis=0)[hitInd]
+            out.append([data.values[i,0],hr])
+            count = 0
+            temp = []
+
+    out = pd.DataFrame(out)
+    #RETURNS: df[date, hit ratio for rolling n trades]
+    return out
+
+#Computes hit ratio for rolling n trades, computes s.t. that it finds n valid trades first
+def getLastNHitRatioEveryLine(data, n, hitInd, acceptableValues):
+    #@FORMAT: df[dates, hitOrNots]
+    out = data.values
+    avgs = np.empty((data.shape[0],1))
+    avgs[:] = np.nan
+    for i in range(0,data.shape[0]):
+        count = 0
+        temp = []
+        j = i
+        while j < data.shape[0]:
+            if out[j,hitInd] in acceptableValues:
+                count = count +1
+                temp.append(out[j,:])
+            if count >= n:
+                hr = np.average(temp,axis=0)[hitInd]
+                avgs[i]=hr
+                break
+            j = j +1
+
+    print(avgs)
+    out =  data.copy()
+    out["Last Trades %"] = avgs
+    print("out",out)
+    #RETURNS: df[date, hit ratio for rolling n trades]
+    return out
+
+
+#Computes hit ratio for rolling blocks of n lines. Does NOT compute for every line on a rolling basis.
+def getNBlockHitRatio(data, gap):
+    #@FORMAT: series[hitOrNots,index=dates]
+    out = []
+    for i in range(0,data.shape[0],gap):
+        hr = data.iloc[i:(i+gap)].mean(skipna=True)*1.0
+        out.append([data.index.values[i],hr])
+
+    out = pd.DataFrame(out)
+    #RETURNS: df[date, hit ratio for rolling n trades]
+    return out
+
+#Autocorrelation analysis
+'''
+DATA_PATH = "L:\Trade_Data.xlsx"
+TAB_NAME = "Data"
+file  = pd.ExcelFile(DATA_PATH)
+data = file.parse(TAB_NAME)
+'''
+
+acceptableValues = [0,1]
+'''
+hr2 = getLastNHitRatioEveryLine(data,15,0,acceptableValues)
+WRITE_PATH = "L:\Hit_Ratio_AR.xlsx"
+writer = pd.ExcelWriter(WRITE_PATH, engine='xlsxwriter')
+hr2.to_excel(writer, sheet_name='Output')
+writer.save()
+'''
+
+'''
+data = data.dropna()
+input = data.values
+print(data)
+'''
+
+def acf_fcn(data,lags=2,alpha=.05):
+    #@FORMAT: data = np(values)
+    acfvalues, confint,qstat,pvalues = acf(data,nlags=lags,qstat=True,alpha=alpha)
+    return [acfvalues,pvalues]
+
+def acf_fcn_highestlag(data,lags,alpha=.05):
+    #@FORMAT: data = np(values)
+    acfarr = acf_fcn(data,lags,alpha=alpha)
+    lagNum = range(1,acfarr[1].shape[0]+1)
+    lagP = np.array(acfarr[1])
+    ordered_arr = np.column_stack((lagNum,lagP))
+    #print('unordered',ordered_arr)
+    ordered_arr.sort(axis=-1)
+    return ordered_arr[0]
+
+def dickeyfuller_fcn(data,maxlag):
+    #@FORMAT: data = np(values)
+    df_fcn = adfuller(data,maxlag=maxlag)
+    return df_fcn[1]
+
+def rl_fcn(data):
+    #@FORMAT: data = np(values)
+    rl = np.std(data)
+    return rl
+
+
+def rolling_block_data_fcn(data,fcn,gap=5,*args,**kwargs):
+    #@FORMAT: data = df(data,index=dates)
+    dates = data.index.values
+    values = data.values
+    out = []
+    out.append([dates[0],0])
+    for i in range(0,values.shape[0],gap):
+        block_values = values[i:i+gap]
+        #print("block values",block_values)
+        stat = fcn(block_values,**kwargs)
+        out.append([dates[i],stat])
+    return out
+
+def getDataTraits(data,gap):
+    #@FORMAT: data = df(data,index=dates)
+    kwargs ={"maxlag":1}
+    rolling_df_data = rolling_block_data_fcn(data,dickeyfuller_fcn,gap=gap,**kwargs)
+    rolling_df_data = pd.DataFrame(rolling_df_data)
+
+    kwargs ={"lags":1}
+    rolling_acf_data = rolling_block_data_fcn(data,acf_fcn_highestlag,gap=gap,**kwargs)
+    rolling_acf_data= pd.DataFrame(rolling_acf_data)
+
+
+    rolling_rl_data = rolling_block_data_fcn(data,rl_fcn,gap=gap)
+    rolling_rl_data = pd.DataFrame(rolling_rl_data)
+
+    output = pd.DataFrame(rolling_df_data.iloc[:,1].tolist(),columns=['Dickey Fuller'],index=rolling_df_data.iloc[:,0])
+    output['Autocorrelation'] = rolling_acf_data.iloc[:,1].tolist()
+    output['RL'] = rolling_rl_data.iloc[:,1].tolist()
+    #@RETURNS: df(df_value, [acf_corr, lag_number], rl_data],index=dates]
+    return output
+
+
+def calcSignalCorrelation(data):
+    #@FORMAT: data = df(signal1_hr,signal2_hr,index=dates)
+    newData = data.dropna()
+    corr = data.corr()
+    return corr, 1.0*newData.shape[0]/data.shape[0]
+
+
+
+DATA_PATH = "L:\Trade_Data.xlsx"
+TAB_NAME = "Temp_Data"
+file  = pd.ExcelFile(DATA_PATH)
+data = file.parse(TAB_NAME)
+
+tst = np.array([1,2,1,2,1,1,2,2,1,0,1,3,1,2,1,2,1,2,1,1,2,2,1,0,1,3,1,2])
+
+tsy_data = data.loc[:,"Change (Close to Close)"]
+
+tst_pd = pd.Series(tst)
+
+data_traits =getDataTraits(tsy_data,10)
+
+
+
+
+DATA_PATH = "L:\Trade_Data.xlsx"
+TAB_NAME = "Data"
+file  = pd.ExcelFile(DATA_PATH)
+data = file.parse(TAB_NAME)
+
+corr, matches = calcSignalCorrelation(data)
+print(corr)
+print(matches)
+
+hrs = getNBlockHitRatio(data.iloc[:,0],20)
+print(hrs)
+
+#print(data_traits)
+
+
+WRITE_PATH = "L:\Trade_Output.xlsx"
+writer = pd.ExcelWriter(WRITE_PATH, engine='xlsxwriter')
+hrs.to_excel(writer, sheet_name='Output')
+#writer.save()
+
+
+'''
+#Kmeans
+scs = []
+for i in range(2,30):
+    knn = KMeans(n_clusters=i).fit(X)
+    labels = knn.labels_
+    sc = silhouette_score(X, labels)
+    scs.append([i,sc])
+    #print(sc)
+
+scs = sorted(scs,key=itemgetter(1),reverse=True)
+scs = pd.DataFrame(scs,columns=['K','Score'])
+
+#sns.lmplot(x='K',y='Score',data=scs, fit_reg=False)
+#plt.show()
+'''
+'''
+#Finds the K that maximizes AR score
+goods  = []
+for i in range(2,20):
+    labels = KMeans(n_clusters=i).fit(X).labels_
+    labels_true = Y.tolist()
+    #labels = [3]*100+[4]
+    #labels_true = [1]*99+[0]*2
+    goodness = metrics.adjusted_rand_score(labels_true,labels)
+    goods.append([i,goodness])
+print(goods)
+'''
