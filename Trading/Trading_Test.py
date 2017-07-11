@@ -100,7 +100,7 @@ rolling_data = data.drop('Yield',axis=1)
 rolling_data = rolling_data.dropna(axis=0,how='any')
 print(rolling_data)
 
-acf_args = {'lags':2, 'alpha':.05}
-acf_data = myST.rolling_block_data_fcn(rolling_data,myST.acf_fcn,20,**acf_args)
+acf_args = {'lags':4, 'alpha':.05}
+acf_data = myST.rolling_block_data_fcn(rolling_data,myST.acf_fcn_only_cor,30,**acf_args)
 
 print(pd.DataFrame(acf_data))

@@ -129,6 +129,11 @@ def acf_fcn(data,lags=2,alpha=.05):
     except:
         return [np.nan]
 
+#Calcs only correlations for all lags
+def acf_fcn_only_cor(data,lags=2,alpha=.05):
+    #@FORMAT: data = np(values)
+    result = acf_fcn(data,lags, alpha)
+    return result[0]
 
 
 
