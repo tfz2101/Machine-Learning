@@ -3,7 +3,9 @@ import numpy as np
 import datetime as dt
 import time as time
 import os
-#from pykalman import KalmanFilter
+
+from pykalman import KalmanFilter
+import arch.unitroot as UnitRoot
 import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import acf,pacf, adfuller
 from sklearn.cluster import KMeans
@@ -109,12 +111,7 @@ def getNBlockHitRatio(data, gap):
     return out
 
 #Autocorrelation analysis
-'''
-DATA_PATH = "L:\Trade_Data.xlsx"
-TAB_NAME = "Data"
-file  = pd.ExcelFile(DATA_PATH)
-data = file.parse(TAB_NAME)
-'''
+
 
 acceptableValues = [0,1]
 
@@ -135,6 +132,15 @@ def acf_fcn_only_cor(data,lags=2,alpha=.05):
     result = acf_fcn(data,lags, alpha)
     return result[0]
 
+
+#Calcs only correlations, get only the ith lags
+def acf_fcn_ith_cor(data,ith=2,lags=4,alpha=.05):
+    #@FORMAT: data = np(values)
+    try:
+        result = acf_fcn_only_cor(data,lags, alpha)
+        return result[ith]
+    except:
+        return [np.nan]
 
 
 #Calcs the p value for for the best fit lag
@@ -163,8 +169,22 @@ def acf_fcn_highestlag_P_Val(data,lags,alpha=.05):
 #Calcs p value for DF test
 def dickeyfuller_fcn(data,maxlag):
     #@FORMAT: data = np(values)
-    df_fcn = adfuller(data,maxlag=maxlag)
-    return df_fcn[1]
+    try:
+        df_fcn = adfuller(data,maxlag)
+        return df_fcn[1]
+    except:
+        return np.nan
+
+#Calcs p value for Phillips-Perron test for Stationarity
+def pp_test_fcn(data,maxlag):
+    #@FORMAT: data = np(values)
+    try:
+        pp_fcn = UnitRoot.PhillipsPerron(data,maxlag)
+        return pp_fcn.pvalue
+    except:
+        return np.nan
+
+
 
 #Calcs realized volatility
 def rl_fcn(data):
@@ -172,6 +192,7 @@ def rl_fcn(data):
     rl = np.std(data)
     return rl
 
+#Applies 'fcn' to every block. It doesn't roll for every datapoint
 def rolling_block_data_fcn(data,fcn,gap=5,*args,**kwargs):
     #@FORMAT: data = df(data,index=dates)
     dates = data.index.values
@@ -183,6 +204,21 @@ def rolling_block_data_fcn(data,fcn,gap=5,*args,**kwargs):
         stat = fcn(block_values,**kwargs)
         out.append([dates[i],stat])
     return out
+
+#Applies 'fcn' to every datapoint for a given lookback
+def rolling_data_fcn(data,fcn,gap=5,*args,**kwargs):
+    #@FORMAT: data = df(data,index=dates)
+    dates = data.index.values
+    values = data.values
+    out = []
+    out.append([dates[0],0])
+    for i in range(0,values.shape[0],1):
+        block_values = values[i:i+gap]
+        stat = fcn(block_values,**kwargs)
+        out.append([dates[i],stat])
+    return out
+
+
 
 #Returns rolling stats for dickey fuller test, p val for the best fit lag for ACF, realized volatility,
 def getDataTraits(data,gap):
