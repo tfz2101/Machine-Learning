@@ -11,6 +11,8 @@ from Momentum_Module import Signals_Testing as myST
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.ensemble import GradientBoostingClassifier
 
+from pandas import TimeSeries
+
 '''
 DATA_PATH = "L:\Trade_Data.xlsx"
 TAB_NAME = "Temp_Data"
@@ -96,10 +98,8 @@ X = np.array([1,2,3,5,1,1,1,1,3,0,1,4,6,7,8,9])
 acf = myST.acf_fcn(X,5,.05)
 
 pp = myST.pp_test_fcn(X,10)
-print(pp)
 
 df = myST.dickeyfuller_fcn(X,10)
-print(df)
 
 rolling_data = data.drop('Yield',axis=1)
 rolling_data = rolling_data.dropna(axis=0,how='any')
@@ -112,5 +112,13 @@ acf_data = myST.rolling_data_fcn(rolling_data,myST.pp_test_fcn,gap=7,**acf_args)
 
 acf_data = pd.DataFrame(acf_data)
 
-print(acf_data)
-myST.write(acf_data,WRITE_PATH,TAB)
+#print(acf_data)
+#myST.write(acf_data,WRITE_PATH,TAB)
+
+
+
+TAB_NAME = "Temp_Data"
+file  = pd.ExcelFile(DATA_PATH)
+data = file.parse(TAB_NAME)
+
+data = data.dropna(axis=1)
