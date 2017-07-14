@@ -13,6 +13,7 @@ from sklearn.metrics import silhouette_score
 from operator import itemgetter
 from sklearn import linear_model as LM
 from sklearn.cross_validation import cross_val_score
+from sklearn.decomposition import PCA
 
 
 #Kalman Filter
@@ -268,6 +269,25 @@ def calcSignalCorrelation(data):
     newData = data.dropna()
     corr = data.corr()
     return corr, 1.0*newData.shape[0]/data.shape[0]
+
+
+def getPCA(data,n_components):
+    #@FORMAT: data = df(data,index=dates)
+    X = data.values
+    pca = PCA(n_components)
+    pca.fit(X)
+    newdata = pca.fit_transform(X)
+    newdata = pd.DataFrame(newdata)
+    print(pca.components_)
+    print(pca.explained_variance_ratio_)
+    covar_o = np.cov(np.transpose(X.values))
+    eigval_o, eigvec_o = np.linalg.eig(covar_o)
+    #print(eigvec_o)
+    #print(eigval_o)
+    #covar = np.cov(np.transpose(newdata.values))
+    #eigval, eigvec = np.linalg.eig(covar)
+    #print(eigvec)
+    #print(eigval)
 
 
 def write(datadf, path, tab="Sheet1"):
