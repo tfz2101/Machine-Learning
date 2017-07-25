@@ -11,18 +11,44 @@ def substitute(attack_payload, subsitution_table):
     # Using the substitution table you generated to encrypt attack payload
     # Note that you also need to generate a xor_table which will be used to decrypt the attack_payload
     # i.e. (encrypted attack payload) XOR (xor_table) = (original attack payload)
-    print('subsitution table', subsitution_table)
+    attack_encoded = []
 
-    b_attack_payload = bytearray(attack_payload)
+    print('q test',subsitution_table['q'])
+
+    for char in attack_payload:
+        replace_dict = subsitution_table[char]
+        #print('original char',char)
+        #print("replacement char", replace_char)
+
+
+        #Choose Probabilistically
+        replace_char = list(replace_dict)[0]
+
+        attack_encoded.append(replace_char)
+
+    attack_encoded = ''.join(attack_encoded)
 
     print('attack payload', attack_payload)
+    print('encloded attack',attack_encoded)
+
+    b_attack_payload = bytearray(attack_payload)
+    b_encoded_payload = bytearray(attack_encoded)
+
     result = []
     xor_table = []
+
+    #Generate XOR table
+    for i in range(0,len(b_attack_payload)):
+        xor_table.append(b_attack_payload[i] ^ b_encoded_payload[i])
+
+    print(xor_table)
+
+
     # Based on your implementattion of substitution table, please prepare result and xor_table as output
 
-    #return (xor_table, result)
+    return (xor_table, attack_encoded)
+    #return ('dummy1','dummy2')
 
-    return ('dummy1','dummy2')
 def findFrequency(character,lst):
     output = 'NOTHING'
     for item in lst:
@@ -31,16 +57,16 @@ def findFrequency(character,lst):
     return output
 
 def getNormalMapping(substitution_table,sorted_attack_frequency):
-        substitution_table = pd.DataFrame(substitution_table,columns=['Attack Char','Normal Char','Normal Frequency'])
-        #print(substitution_table)
-        grouped =  substitution_table.groupby(['Attack Char'])['Normal Frequency'].sum()
-        ratios = pd.Series(index=grouped.index.values)
-        for char in grouped.index.values:
-            ratios.loc[char] = findFrequency(char,sorted_attack_frequency)/grouped.loc[char]
-        print(grouped.sort_values(ascending=False))
-        sorted_ratios = ratios.sort_values(ascending=False)
-        print(sorted_ratios)
-        return sorted_ratios
+    substitution_table = pd.DataFrame(substitution_table,columns=['Attack Char','Normal Char','Normal Frequency'])
+    #print(substitution_table)
+    grouped =  substitution_table.groupby(['Attack Char'])['Normal Frequency'].sum()
+    ratios = pd.Series(index=grouped.index.values)
+    for char in grouped.index.values:
+        ratios.loc[char] = findFrequency(char,sorted_attack_frequency)/grouped.loc[char]
+    #print(grouped.sort_values(ascending=False))
+    sorted_ratios = ratios.sort_values(ascending=False)
+    #print(sorted_ratios)
+    return sorted_ratios
 
 
 def getSubstitutionTable(artificial_payload, attack_payload):
@@ -52,19 +78,24 @@ def getSubstitutionTable(artificial_payload, attack_payload):
 
     sorted_artificial_frequency = sorting(artificial_frequency)
     sorted_attack_frequency = sorting(attack_frequency)
+    print('normal frquency',sorted_artificial_frequency)
 
-    # Your code here ...
     substitution_table = []
+    sub_output = {}
     for i in range(0,len(sorted_attack_frequency)):
         line = [sorted_attack_frequency[i][0],sorted_artificial_frequency[i][0],sorted_artificial_frequency[i][1]]
         #print(line)
+        if sorted_artificial_frequency[i][0] == 'q':
+            print('q FOUND!!!!')
         substitution_table.append(line)
+        sub_output[sorted_attack_frequency[i][0]]={sorted_artificial_frequency[i][0]:sorted_artificial_frequency[i][1]}
 
-    #substitution_table.append(['a','o',1])
 
     for i in range(len(sorted_attack_frequency),len(sorted_artificial_frequency)):
+        if sorted_artificial_frequency[i][0] == 'q':
+            print('q FOUND!!!!')
+
         x_char = sorted_artificial_frequency[i][0]
-        #print(x_char)
 
         sorted_ratios = getNormalMapping(substitution_table,sorted_attack_frequency)
         #print('sorted ratios',type(sorted_ratios))
@@ -74,9 +105,10 @@ def getSubstitutionTable(artificial_payload, attack_payload):
         line = [y_char, x_char, x_char_freq]
         substitution_table.append(line)
 
-    # You may implement substitution table in your way. Just make sure it can be used in substitute(attack_payload, subsitution_table)
+        sub_output[y_char][x_char] = x_char_freq
 
-    return substitution_table
+    # You may implement substitution table in your way. Just make sure it can be used in substitute(attack_payload, subsitution_table)
+    return sub_output
 
 
 def getAttackBodyPayload(path):
