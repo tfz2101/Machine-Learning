@@ -13,17 +13,11 @@ def substitute(attack_payload, subsitution_table):
     # i.e. (encrypted attack payload) XOR (xor_table) = (original attack payload)
     attack_encoded = []
 
-    print('q test',subsitution_table['q'])
-
     for char in attack_payload:
         replace_dict = subsitution_table[char]
-        #print('original char',char)
-        #print("replacement char", replace_char)
 
-
-        #Choose Probabilistically
+        #TODO:Choose Probabilistically
         replace_char = list(replace_dict)[0]
-
         attack_encoded.append(replace_char)
 
     attack_encoded = ''.join(attack_encoded)
@@ -34,20 +28,20 @@ def substitute(attack_payload, subsitution_table):
     b_attack_payload = bytearray(attack_payload)
     b_encoded_payload = bytearray(attack_encoded)
 
-    result = []
     xor_table = []
-
     #Generate XOR table
+
+    l_attack_payload = list(attack_payload)
+    l_encoded_payload = list(attack_encoded)
     for i in range(0,len(b_attack_payload)):
-        xor_table.append(b_attack_payload[i] ^ b_encoded_payload[i])
+        xor_table.append(chr(b_attack_payload[i] ^ b_encoded_payload[i]))
 
-    print(xor_table)
-
+    print('xor table',xor_table)
 
     # Based on your implementattion of substitution table, please prepare result and xor_table as output
-
+    attack_encoded = list(attack_encoded)
     return (xor_table, attack_encoded)
-    #return ('dummy1','dummy2')
+
 
 def findFrequency(character,lst):
     output = 'NOTHING'
@@ -84,17 +78,11 @@ def getSubstitutionTable(artificial_payload, attack_payload):
     sub_output = {}
     for i in range(0,len(sorted_attack_frequency)):
         line = [sorted_attack_frequency[i][0],sorted_artificial_frequency[i][0],sorted_artificial_frequency[i][1]]
-        #print(line)
-        if sorted_artificial_frequency[i][0] == 'q':
-            print('q FOUND!!!!')
         substitution_table.append(line)
         sub_output[sorted_attack_frequency[i][0]]={sorted_artificial_frequency[i][0]:sorted_artificial_frequency[i][1]}
 
 
     for i in range(len(sorted_attack_frequency),len(sorted_artificial_frequency)):
-        if sorted_artificial_frequency[i][0] == 'q':
-            print('q FOUND!!!!')
-
         x_char = sorted_artificial_frequency[i][0]
 
         sorted_ratios = getNormalMapping(substitution_table,sorted_attack_frequency)
