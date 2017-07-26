@@ -21,7 +21,7 @@ def padding(artificial_payload, raw_payload):
 
 	def calcAbsFreq(string, rel_freq):
 		return len(string) * rel_freq
-
+	'''
 	shared_char = []
 	for char in artificial_frequency:
 		if char in raw_payload_frequency:
@@ -40,4 +40,4 @@ def padding(artificial_payload, raw_payload):
 
 
     # Your code here ... 
-
+	'''
