@@ -61,10 +61,23 @@ if __name__ == '__main__':
 		#print('new payload',len(raw_payload))
 
 
+	art_freq = frequency(artificial_payload)
+	print('final art freq',art_freq)
+	raw_freq = frequency(raw_payload)
+	print('final raw freq',raw_freq)
 
+	comp_list = []
+	for a in raw_freq:
+		if a in art_freq:
+			comp_list.append([a, raw_freq[a],art_freq[a]])
+		else:
+			comp_list.append([a, raw_freq[a],0])
+	comp_list = pd.DataFrame(comp_list,columns=['char','raw freq','artificial freq'])
+	comp_list = comp_list.sort_values('raw freq',ascending=False)
+	print('ending freq comp',comp_list)
 
-
+	'''
 	# Write prepared payload to Output file and test against your PAYL model
 	with open("output", "w") as result_file:
 		result_file.write(''.join(raw_payload))
-
+	'''
