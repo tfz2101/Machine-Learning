@@ -6,6 +6,18 @@ import socket
 from collections import Counter
 from frequency import *
 import pandas as pd
+import numpy as np
+
+def getDictWithProp(dict):
+    sum = 0
+    items = []
+    probs = []
+    for item in dict:
+        items.append(item)
+        sum += dict[item]
+    for item in dict:
+        probs.append(dict[item]/sum)
+    return items, probs
 
 def substitute(attack_payload, subsitution_table):
     # Using the substitution table you generated to encrypt attack payload
@@ -17,7 +29,10 @@ def substitute(attack_payload, subsitution_table):
         replace_dict = subsitution_table[char]
 
         #TODO:Choose Probabilistically
-        replace_char = list(replace_dict)[0]
+        #print('replace list', replace_dict)
+        chars, probs = getDictWithProp(replace_dict)
+        np.random.seed(1)
+        replace_char = np.random.choice(chars,replace=True,p=probs)
         attack_encoded.append(replace_char)
 
     attack_encoded = ''.join(attack_encoded)
@@ -31,10 +46,15 @@ def substitute(attack_payload, subsitution_table):
     xor_table = []
     #Generate XOR table
 
-    l_attack_payload = list(attack_payload)
-    l_encoded_payload = list(attack_encoded)
+
     for i in range(0,len(b_attack_payload)):
-        xor_table.append(chr(b_attack_payload[i] ^ b_encoded_payload[i]))
+        #print('attack character',attack_payload[i])
+        #print('attack encoded char',attack_encoded[i])
+        xor_char = chr(b_attack_payload[i] ^ b_encoded_payload[i])
+        #print('xor char',xor_char)
+        xor_table.append(xor_char)
+        reverse_char = chr(ord(attack_encoded[i]) ^ ord(xor_char))
+        #print(reverse_char,'reverse char')
 
     print('xor table',xor_table)
 
@@ -52,7 +72,6 @@ def findFrequency(character,lst):
 
 def getNormalMapping(substitution_table,sorted_attack_frequency):
     substitution_table = pd.DataFrame(substitution_table,columns=['Attack Char','Normal Char','Normal Frequency'])
-    #print(substitution_table)
     grouped =  substitution_table.groupby(['Attack Char'])['Normal Frequency'].sum()
     ratios = pd.Series(index=grouped.index.values)
     for char in grouped.index.values:
