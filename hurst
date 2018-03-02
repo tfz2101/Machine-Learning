@@ -1,0 +1,23 @@
+import nolds
+import numpy as np
+import pandas as pd
+
+
+DATA_PATH = "L:\ZV_Dollar_Prices.xlsx"
+TAB_NAME = "Sheet1"
+
+
+
+file  = pd.ExcelFile(DATA_PATH)
+data = file.parse(TAB_NAME)
+data = data.dropna(axis=0)
+
+fn45 = data[104].values
+
+
+hr1 = nolds.hurst_rs(fn45)
+print(hr1)
+
+hr2 = nolds.dfa(fn45)
+print(hr2)
+
