@@ -63,6 +63,11 @@ model.add(Dense(units=1))
 
 model.compile(loss='mean_squared_error',optimizer='adam')
 
+#Epochs is how many times the model cycles through the training data. Each subsequent epoch the model will
+#have a different memory to judge the input data.
+
+#Batch size = 1 means it is online training, taking the input data one at a time instead of looking a batch of sequence
+#data at once. 
 model.fit(X_TRAIN,Y_TRAIN,batch_size=1,epochs=10,verbose=2)
 
 
