@@ -53,7 +53,7 @@ colors = [['G', 'G', 'G'],
           ['G', 'R', 'R'],
           ['G', 'G', 'G']]
 measurements = ['R', 'R']
-motions = [[0,0], [0,1]]
+motions = [[0,0], [0,0]]
 sensor_right = 0.8
 p_move = 1.0
 
@@ -69,16 +69,10 @@ p = np.full((len(colors[0]),len(colors)),init_p)
 
 p1 = sense(p,measurements[0],colors, pMiss, pHit)
 
-'''
-for k in range(0, len(measurements)):
-    p = sense(p, measurements[k],colors,pMiss,pHit)
-    print(np.array(p))
-
-'''
 
 pMove = p_move
-pNoMove = 1- p_move
+pNoMove = 1- pMove
 for i in range(0,len(motions)):
-    p = sense(p, measurements[i], colors, pMiss, pHit)
-    p = move(p,motions[i],pMove,pNoMove)
+    p = sense(p, measurements[i], colors, pMiss=pMiss, pHit=pHit)
+    p = move(p,motions[i],pMove=pMove,pNoMove=pNoMove)
     print(p)
