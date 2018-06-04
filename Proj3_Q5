@@ -22,7 +22,7 @@
             error_bearing = abs(measurements[i] -  predicted_measurement[i])
             error_bearing = (error_bearing + pi) % (2.0 * pi) - pi
             
-            error *= (exp(-(error_bearing ** 2) / (self.bearing_noise ** 2)
+            error *= (exp(-(error_bearing ** 2) / (self.bearing_noise ** 2)/
                     sqrt(2.0 * pi * (self.bearing_noise ** 2)))
              
         return error
